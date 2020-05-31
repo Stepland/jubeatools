@@ -1,5 +1,7 @@
 """
 Provides the Song class, the central model for chartsets
+Every input format is converted to a Song instance
+Every output format is created from a Song instance
 
 Precision-critical times are stored as a fraction of beats,
 otherwise a decimal number of seconds can be used
@@ -9,9 +11,9 @@ from dataclasses import dataclass
 from collections import namedtuple, UserList
 from decimal import Decimal
 from fractions import Fraction
-from pathlib import Path
 from typing import List, Optional, Union, Mapping
 
+from path import Path
 from multidict import MultiDict
 
 
@@ -28,6 +30,10 @@ class NotePosition:
     x: int
     y: int
 
+    @property
+    def index(self):
+        return self.x + 4*self.y
+
 
 @dataclass
 class TapNote:
@@ -42,15 +48,8 @@ class LongNote:
     duration: BeatsTime
     tail_tip: NotePosition
 
-
-@dataclass
-class Metadata:
-    title: str
-    artist: str
-    audio: Path
-    cover: Path
-    preview_start: SecondsTime
-    preview_length: SecondsTime
+    def __hash__(self):
+        return hash((self.time, self.position))
 
 
 @dataclass
@@ -75,6 +74,17 @@ class Timing:
 class Chart:
     level: Decimal
     timing: Optional[Timing]
+    notes: List[Union[TapNote, LongNote]]
+
+
+@dataclass
+class Metadata:
+    title: str
+    artist: str
+    audio: Path
+    cover: Path
+    preview_start: SecondsTime
+    preview_length: SecondsTime
 
 
 class Song:
@@ -84,5 +94,5 @@ class Song:
     """
     def __init__(self):
         self.metadata = Metadata()
-        self.charts = MultiDict()
-        self.global_timing = Timing()
+        self.charts : Mapping[str, Chart] = MultiDict()
+        self.global_timing : Optional[Timing] = Timing()
