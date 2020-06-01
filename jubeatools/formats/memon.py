@@ -8,13 +8,13 @@ parse than existing "memo-like" formats (memo, youbeat, etc ...).
 https://github.com/Stepland/memon
 """
 
-import warnings
-from path import Path
-from typing import Mapping, IO, Iterable, Tuple, Any, Dict, Union, List
+from typing import IO, Iterable, Tuple, Any, Dict, Union, List
 from io import BytesIO
 from itertools import chain
 
+from path import Path
 import simplejson as json
+from marshmallow import Schema, fields, RAISE, validate, validates_schema, ValidationError
 
 from jubeatools.song import Song, BPMChange, TapNote, LongNote
 from jubeatools.utils import lcm
@@ -29,7 +29,7 @@ from jubeatools.utils import lcm
 #         6
 #        10
 
-LONG_NOTE_VALUE_V0 = {
+X_Y_OFFSET_TO_P_VALUE = {
     (0, -1): 0,
     (0, -2): 4,
     (0, -3): 8,
@@ -44,9 +44,101 @@ LONG_NOTE_VALUE_V0 = {
     (-3, 0): 11
 }
 
+P_VALUE_TO_X_Y_OFFSET = { v: k for k, v in X_Y_OFFSET_TO_P_VALUE.items() }
+
+
+class StrictSchema(Schema):
+    class Meta:
+        unknown = RAISE
+
+
+class MemonNote(StrictSchema):
+    n = fields.Integer(required=True, validate=validate.Range(min=0, max=15))
+    t = fields.Integer(required=True, validate=validate.Range(min=0))
+    l = fields.Integer(required=True, validate=validate.Range(min=0))
+    p = fields.Integer(required=True, validate=validate.Range(min=0, max=11))
+
+    @validates_schema
+    def validate_tail_tip_position(self, data, **kwargs):
+        if data["l"] > 0:
+            x = data["n"] % 4
+            y = data["n"] // 4
+            dx, dy = P_VALUE_TO_X_Y_OFFSET[data["p"]]
+            if (not (0 <= x + dx < 4 and 0 <= y + dy < 4)):
+                raise ValidationError("Invalid tail position : {data}")
+
+
+class MemonChart_0_1_0(StrictSchema):
+    level = fields.Integer(required=True)
+    resolution = fields.Integer(required=True, validate=validate.Range(min=1))
+    notes = fields.Nested(MemonNote, many=True)
+
+
+class MemonChart_legacy(MemonChart_0_1_0):
+    dif_name = fields.String(required=True)
+
+
+class MemonMetadata_legacy(StrictSchema):
+    title = fields.String(required=True, data_key="song title")
+    artist = fields.String(required=True)
+    audio = fields.String(required=True, data_key="music path")
+    cover = fields.String(required=True, data_key="jacket path")
+    BPM = fields.Decimal(required=True, validate=validate.Range(min=0, min_inclusive=False))
+    offset = fields.Decimal(required=True)
+
+
+class MemonMetadata_0_1_0(MemonMetadata_legacy):
+    cover = fields.String(required=True, data_key="album cover path")
+
+
+class MemonPreview(StrictSchema):
+    position = fields.Decimal(required=True, validate=validate.Range(min=0))
+    length = fields.Decimal(required=True, validate=validate.Range(min=0, min_inclusive=False))
+
+
+class MemonMetadata_0_2_0(MemonMetadata_0_1_0):
+    preview = fields.Nested(MemonPreview)
+
+
+class Memon_legacy(StrictSchema):
+    metadata = fields.Nested(MemonMetadata_legacy, required=True)
+    data = fields.Nested(MemonChart_legacy, required=True, many=True)
+
+
+class Memon_0_1_0(StrictSchema):
+    version = fields.String(required=True, validate=validate.OneOf(["0.1.0"]))
+    metadata = fields.Nested(MemonMetadata_0_1_0, required=True)
+    data = fields.Dict(keys=fields.String(), values=MemonChart_0_1_0(), required=True)
+
+
+class Memon_0_2_0(StrictSchema):
+    version = fields.String(required=True, validate=validate.OneOf(["0.2.0"]))
+    metadata = fields.Nested(MemonMetadata_0_2_0, required=True)
+    data = fields.Dict(keys=fields.String(), values=MemonChart_0_1_0(), required=True)
+
+
+def _search_and_load(file_or_folder: Path) -> Any:
+    
+    """If given a folder, search for a single .memon file then json.load it
+    If given a file, just json.load it"""
+    
+    if file_or_folder.isdir():
+        memon_files = file_or_folder.files("*.memon")
+        if len(memon_files) > 1:
+            raise ValueError(f"Multiple memon files found in {file_or_folder}")
+        elif len(memon_files) == 0:
+            raise ValueError(f"No memon file found in {file_or_folder}")
+        file_path = memon_files[0]
+    else:
+        file_path = file_or_folder
+
+    return json.load(open(file_path), use_decimal=True)
+
 
 def load_memon_legacy(file_or_folder: Path) -> Song:
-    ...
+    memon = _search_and_load(file_or_folder)
+
+
 
 
 def load_memon_0_1_0(file_or_folder: Path) -> Song:
@@ -61,9 +153,10 @@ def _long_note_tail_value_v0(note: LongNote) -> int:
     dx = note.tail_tip.x - note.position.x
     dy = note.tail_tip.y - note.position.y
     try:
-        return LONG_NOTE_VALUE_V0[dx, dy]
+        return X_Y_OFFSET_TO_P_VALUE[dx, dy]
     except KeyError:
         raise ValueError(f"memon cannot represent a long note with its tail starting ({dx}, {dy}) away from the note") from None
+
 
 def check_representable_in_v0(song: Song, version: str) -> None:
     
@@ -114,6 +207,7 @@ def _compute_resolution(notes: List[Union[TapNote, LongNote]]) -> int:
 
 
 def _iter_dump_notes_v0(resolution: int, notes: List[Union[TapNote, LongNote]]) -> Iterable[Dict[str, int]]:
+    """Iterable that converts notes into the {n, t, l, p} form"""
     for note in sorted(set(notes), key=lambda n: (n.time, n.position)):
         memon_note = {
             "n": note.index,
@@ -132,7 +226,6 @@ def dump_memon_legacy(song: Song) -> Iterable[Tuple[Any, IO]]:
     
     check_representable_in_v0(song, "legacy")
 
-    # JSON object preparation
     memon = {
         "metadata": {
             "song title": song.metadata.title,
@@ -160,7 +253,6 @@ def dump_memon_0_1_0(song: Song, folder: Path) -> None:
     
     check_representable_in_v0(song, "legacy")
 
-    # JSON object preparation
     memon = {
         "version": "0.1.0",
         "metadata": {
@@ -188,7 +280,6 @@ def dump_memon_0_2_0(song: Song, folder: Path) -> None:
     
     check_representable_in_v0(song, "legacy")
 
-    # JSON object preparation
     memon = {
         "version": "0.2.0",
         "metadata": {
@@ -198,13 +289,16 @@ def dump_memon_0_2_0(song: Song, folder: Path) -> None:
             "album cover path": str(song.metadata.cover),
             "BPM": song.global_timing.events[0].BPM,
             "offset": song.global_timing.beat_zero_offset,
-            "preview" : {
-                "position": song.metadata.preview_start,
-                "length": song.metadata.preview_length,
-            }
         },
         "data": {}
     }
+
+    if song.metadata.preview_length != 0:
+        memon["metadata"]["preview"] = {
+            "position": song.metadata.preview_start,
+            "length": song.metadata.preview_length,
+        }
+
     for difficulty, chart in song.charts.items():
         resolution = _compute_resolution(chart.notes)
         memon["data"][difficulty] = {
