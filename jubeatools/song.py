@@ -7,18 +7,22 @@ Precision-critical times are stored as a fraction of beats,
 otherwise a decimal number of seconds can be used
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from collections import namedtuple, UserList
 from decimal import Decimal
 from fractions import Fraction
-from typing import List, Optional, Union, Mapping
+from typing import List, Optional, Union, Mapping, Type
 
 from path import Path
 from multidict import MultiDict
 
 
 class BeatsTime(Fraction):
-    ...
+    @classmethod
+    def from_ticks(cls: Type[Fraction], ticks: int, resolution: int) -> 'BeatsTime':
+        if resolution < 1:
+            raise ValueError(f"resolution cannot be negative : {resolution}")
+        return cls(ticks, resolution)
 
 
 class SecondsTime(Decimal):
@@ -33,6 +37,13 @@ class NotePosition:
     @property
     def index(self):
         return self.x + 4*self.y
+    
+    @classmethod
+    def from_index(cls: Type[NotePosition], index: int) -> 'NotePosition':
+        if not (0 <= index < 16):
+            raise ValueError(f"Note position index out of range : {index}")
+        
+        return cls(x = index%4, y = index//4)
 
 
 @dataclass
@@ -73,7 +84,7 @@ class Timing:
 @dataclass
 class Chart:
     level: Decimal
-    timing: Optional[Timing]
+    timing: Optional[Timing] = None
     notes: List[Union[TapNote, LongNote]]
 
 
@@ -83,16 +94,16 @@ class Metadata:
     artist: str
     audio: Path
     cover: Path
-    preview_start: SecondsTime
-    preview_length: SecondsTime
+    preview_start: SecondsTime = SecondsTime(0)
+    preview_length: SecondsTime = SecondsTime(0)
 
 
+@dataclass
 class Song:
-    """
-    The abstract representation format for all jubeat chart sets.
-    A Song is a set of charts with associated metadata
-    """
-    def __init__(self):
-        self.metadata = Metadata()
-        self.charts : Mapping[str, Chart] = MultiDict()
-        self.global_timing : Optional[Timing] = Timing()
+    
+    """The abstract representation format for all jubeat chart sets.
+    A Song is a set of charts with associated metadata"""
+    
+    metadata: Metadata
+    charts: Mapping[str, Chart] = field(default_factory=MultiDict)
+    global_timing: Optional[Timing] = None

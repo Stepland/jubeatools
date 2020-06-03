@@ -14,9 +14,9 @@ from itertools import chain
 
 from path import Path
 import simplejson as json
-from marshmallow import Schema, fields, RAISE, validate, validates_schema, ValidationError
+from marshmallow import Schema, fields, RAISE, validate, validates_schema, ValidationError, post_load
 
-from jubeatools.song import Song, BPMChange, TapNote, LongNote
+from jubeatools.song import * 
 from jubeatools.utils import lcm
 
 # v0.x.x long note value :
@@ -135,18 +135,123 @@ def _search_and_load(file_or_folder: Path) -> Any:
     return json.load(open(file_path), use_decimal=True)
 
 
+def _load_memon_note_v0(note: dict, resolution: int) -> Union[TapNote, LongNote]:
+    position = NotePosition.from_index(note["n"])
+    time = BeatsTime.from_ticks(ticks=note["t"], resolution=resolution)
+    if (note["l"] > 0):
+        duration = BeatsTime.from_ticks(ticks=note["l"], resolution=resolution)
+        tail_tip = NotePosition(*P_VALUE_TO_X_Y_OFFSET[note["p"]])
+        return LongNote(time, position, duration, tail_tip)
+    else:
+        return TapNote(time, position)
+
+
+
 def load_memon_legacy(file_or_folder: Path) -> Song:
-    memon = _search_and_load(file_or_folder)
+    raw_memon = _search_and_load(file_or_folder)
+    schema = Memon_legacy()
+    memon = schema.load(raw_memon)
+    metadata = Metadata(
+        **{
+            key: memon["metadata"][key]
+            for key in ["title", "artist", "audio", "cover"]
+        }
+    )
+    global_timing = Timing(
+        events=[BPMChange(time=0, BPM=memon["metadata"]["BPM"])],
+        beat_zero_offset=SecondsTime(-memon["metadata"]["offset"])
+    )
+    charts: Mapping[str, Chart] = MultiDict()
+    for memon_chart in memon["data"]:
+        charts.add(
+            memon_chart["dif_name"],
+            Chart(
+                level=memon_chart["level"],
+                notes=[
+                    _load_memon_note_v0(note, memon_chart["resolution"])
+                    for note in memon_chart["notes"]
+                ]
+            )
+        )
+    
+    return Song(
+        metadata=metadata,
+        charts=charts,
+        global_timing=global_timing
+    )
 
 
 
 
 def load_memon_0_1_0(file_or_folder: Path) -> Song:
-    ...
+    raw_memon = _search_and_load(file_or_folder)
+    schema = Memon_0_1_0()
+    memon = schema.load(raw_memon)
+    metadata = Metadata(
+        **{
+            key: memon["metadata"][key]
+            for key in ["title", "artist", "audio", "cover"]
+        }
+    )
+    global_timing = Timing(
+        events=[BPMChange(time=0, BPM=memon["metadata"]["BPM"])],
+        beat_zero_offset=SecondsTime(-memon["metadata"]["offset"])
+    )
+    charts: Mapping[str, Chart] = MultiDict()
+    for difficulty, memon_chart in memon["data"]:
+        charts.add(
+            difficulty,
+            Chart(
+                level=memon_chart["level"],
+                notes=[
+                    _load_memon_note_v0(note, memon_chart["resolution"])
+                    for note in memon_chart["notes"]
+                ]
+            )
+        )
+    
+    return Song(
+        metadata=metadata,
+        charts=charts,
+        global_timing=global_timing
+    )
 
 
 def load_memon_0_2_0(file_or_folder: Path) -> Song:
-    ...
+    raw_memon = _search_and_load(file_or_folder)
+    schema = Memon_0_2_0()
+    memon = schema.load(raw_memon)
+    metadata_dict = {
+        key: memon["metadata"][key]
+        for key in ["title", "artist", "audio", "cover"]
+    }
+    if "preview" in memon["metadata"]:
+        metadata_dict["preview_start"] = memon["metadata"]["preview"]["position"]
+        metadata_dict["preview_length"] = memon["metadata"]["preview"]["length"]
+
+    metadata = Metadata(**metadata_dict)
+    global_timing = Timing(
+        events=[BPMChange(time=0, BPM=memon["metadata"]["BPM"])],
+        beat_zero_offset=SecondsTime(-memon["metadata"]["offset"])
+    )
+    charts: Mapping[str, Chart] = MultiDict()
+    for difficulty, memon_chart in memon["data"]:
+        charts.add(
+            difficulty,
+            Chart(
+                level=memon_chart["level"],
+                notes=[
+                    _load_memon_note_v0(note, memon_chart["resolution"])
+                    for note in memon_chart["notes"]
+                ]
+            )
+        )
+
+    return Song(
+        metadata=metadata,
+        charts=charts,
+        global_timing=global_timing
+    )
 
 
 def _long_note_tail_value_v0(note: LongNote) -> int:
@@ -206,20 +311,19 @@ def _compute_resolution(notes: List[Union[TapNote, LongNote]]) -> int:
     )
 
 
-def _iter_dump_notes_v0(resolution: int, notes: List[Union[TapNote, LongNote]]) -> Iterable[Dict[str, int]]:
-    """Iterable that converts notes into the {n, t, l, p} form"""
-    for note in sorted(set(notes), key=lambda n: (n.time, n.position)):
-        memon_note = {
-            "n": note.index,
-            "t": note.time.numerator * (resolution // note.time.denominator),
-            "l": 0,
-            "p": 0
-        }
-        if isinstance(note, LongNote):
-            memon_note["l"] = note.duration.numerator * (resolution // note.duration.denominator)
-            memon_note["p"] = _long_note_tail_value_v0(note)
-        
-        yield memon_note
+def _dump_memon_note_v0(note: Union[TapNote, LongNote], resolution: int) -> Dict[str, int]:
+    """converts a note into the {n, t, l, p} form"""
+    memon_note = {
+        "n": note.index,
+        "t": note.time.numerator * (resolution // note.time.denominator),
+        "l": 0,
+        "p": 0
+    }
+    if isinstance(note, LongNote):
+        memon_note["l"] = note.duration.numerator * (resolution // note.duration.denominator)
+        memon_note["p"] = _long_note_tail_value_v0(note)
+    
+    return memon_note
 
 
 def dump_memon_legacy(song: Song) -> Iterable[Tuple[Any, IO]]:
@@ -233,7 +337,7 @@ def dump_memon_legacy(song: Song) -> Iterable[Tuple[Any, IO]]:
             "music path": str(song.metadata.audio),
             "jacket path": str(song.metadata.cover),
             "BPM": song.global_timing.events[0].BPM,
-            "offset": song.global_timing.beat_zero_offset
+            "offset": -song.global_timing.beat_zero_offset
         },
         "data": []
     }
@@ -243,7 +347,10 @@ def dump_memon_legacy(song: Song) -> Iterable[Tuple[Any, IO]]:
             "dif_name": difficulty,
             "level": chart.level,
             "resolution": resolution,
-            "notes": list(_iter_dump_notes_v0(resolution, chart.notes))
+            "notes": [
+                _dump_memon_note_v0(note, resolution)
+                for note in sorted(set(chart.notes), key=lambda n: (n.time, n.position))
+            ]
         })
 
     return [(song, _dump_to_json(memon))]
@@ -261,7 +368,7 @@ def dump_memon_0_1_0(song: Song, folder: Path) -> None:
             "music path": str(song.metadata.audio),
             "album cover path": str(song.metadata.cover),
             "BPM": song.global_timing.events[0].BPM,
-            "offset": song.global_timing.beat_zero_offset
+            "offset": -song.global_timing.beat_zero_offset
         },
         "data": {}
     }
@@ -270,7 +377,10 @@ def dump_memon_0_1_0(song: Song, folder: Path) -> None:
         memon["data"][difficulty] = {
             "level": chart.level,
             "resolution": resolution,
-            "notes": list(_iter_dump_notes_v0(resolution, chart.notes))
+            "notes": [
+                _dump_memon_note_v0(note, resolution)
+                for note in sorted(set(chart.notes), key=lambda n: (n.time, n.position))
+            ]
         }
 
     return [(song, _dump_to_json(memon))]
@@ -288,7 +398,7 @@ def dump_memon_0_2_0(song: Song, folder: Path) -> None:
             "music path": str(song.metadata.audio),
             "album cover path": str(song.metadata.cover),
             "BPM": song.global_timing.events[0].BPM,
-            "offset": song.global_timing.beat_zero_offset,
+            "offset": -song.global_timing.beat_zero_offset,
         },
         "data": {}
     }
@@ -304,7 +414,10 @@ def dump_memon_0_2_0(song: Song, folder: Path) -> None:
         memon["data"][difficulty] = {
             "level": chart.level,
             "resolution": resolution,
-            "notes": list(_iter_dump_notes_v0(resolution, chart.notes))
+            "notes": [
+                _dump_memon_note_v0(note, resolution)
+                for note in sorted(set(chart.notes), key=lambda n: (n.time, n.position))
+            ]
         }
     
     return [(song, _dump_to_json(memon))]
