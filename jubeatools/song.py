@@ -19,7 +19,7 @@ from multidict import MultiDict
 
 class BeatsTime(Fraction):
     @classmethod
-    def from_ticks(cls: Type[Fraction], ticks: int, resolution: int) -> 'BeatsTime':
+    def from_ticks(cls: Type[Fraction], ticks: int, resolution: int) -> "BeatsTime":
         if resolution < 1:
             raise ValueError(f"resolution cannot be negative : {resolution}")
         return cls(ticks, resolution)
@@ -36,14 +36,14 @@ class NotePosition:
 
     @property
     def index(self):
-        return self.x + 4*self.y
-    
+        return self.x + 4 * self.y
+
     @classmethod
-    def from_index(cls: Type[NotePosition], index: int) -> 'NotePosition':
+    def from_index(cls: Type[NotePosition], index: int) -> "NotePosition":
         if not (0 <= index < 16):
             raise ValueError(f"Note position index out of range : {index}")
-        
-        return cls(x = index%4, y = index//4)
+
+        return cls(x=index % 4, y=index // 4)
 
 
 @dataclass
@@ -70,14 +70,8 @@ class BPMEvent:
 
 
 @dataclass
-class StopEvent:
-    time: BeatsTime
-    duration: BeatsTime
-
-
-@dataclass
 class Timing:
-    events: List[Union[BPMEvent, StopEvent]]
+    events: List[BPMEvent]
     beat_zero_offset: SecondsTime
 
 
@@ -100,10 +94,10 @@ class Metadata:
 
 @dataclass
 class Song:
-    
+
     """The abstract representation format for all jubeat chart sets.
     A Song is a set of charts with associated metadata"""
-    
+
     metadata: Metadata
     charts: Mapping[str, Chart] = field(default_factory=MultiDict)
     global_timing: Optional[Timing] = None

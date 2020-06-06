@@ -3,6 +3,7 @@ from typing import Optional
 
 import click
 
+
 @click.command()
 def convert():
     ...
