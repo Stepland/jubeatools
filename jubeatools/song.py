@@ -64,20 +64,20 @@ class LongNote:
 
 
 @dataclass
-class BPMChange:
+class BPMEvent:
     time: BeatsTime
     BPM: Decimal
 
 
 @dataclass
-class Stop:
+class StopEvent:
     time: BeatsTime
     duration: BeatsTime
 
 
 @dataclass
 class Timing:
-    events: List[Union[BPMChange, Stop]]
+    events: List[Union[BPMEvent, StopEvent]]
     beat_zero_offset: SecondsTime
 
 

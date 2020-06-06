@@ -158,7 +158,7 @@ def load_memon_legacy(file_or_folder: Path) -> Song:
         }
     )
     global_timing = Timing(
-        events=[BPMChange(time=0, BPM=memon["metadata"]["BPM"])],
+        events=[BPMEvent(time=0, BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"])
     )
     charts: Mapping[str, Chart] = MultiDict()
@@ -194,7 +194,7 @@ def load_memon_0_1_0(file_or_folder: Path) -> Song:
         }
     )
     global_timing = Timing(
-        events=[BPMChange(time=0, BPM=memon["metadata"]["BPM"])],
+        events=[BPMEvent(time=0, BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"])
     )
     charts: Mapping[str, Chart] = MultiDict()
@@ -231,7 +231,7 @@ def load_memon_0_2_0(file_or_folder: Path) -> Song:
 
     metadata = Metadata(**metadata_dict)
     global_timing = Timing(
-        events=[BPMChange(time=0, BPM=memon["metadata"]["BPM"])],
+        events=[BPMEvent(time=0, BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"])
     )
     charts: Mapping[str, Chart] = MultiDict()
@@ -282,7 +282,7 @@ def check_representable_in_v0(song: Song, version: str) -> None:
             raise ValueError(f"memon:{version} does not handle Stops or BPM changes")
     
     event = song.global_timing.events[0]
-    if not isinstance(event, BPMChange):
+    if not isinstance(event, BPMEvent):
         raise ValueError("The song file has no BPM")
     
     if event.BPM <= 0:
