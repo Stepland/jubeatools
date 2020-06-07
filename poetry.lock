@@ -110,6 +110,17 @@ six = "*"
 
 [[package]]
 category = "main"
+description = "(Soon to be) the fastest pure-Python PEG parser I could muster"
+name = "parsimonious"
+optional = false
+python-versions = "*"
+version = "0.8.1"
+
+[package.dependencies]
+six = ">=1.9.0"
+
+[[package]]
+category = "main"
 description = "A module wrapper for os.path"
 name = "path"
 optional = false
@@ -205,7 +216,7 @@ python-versions = ">=2.5, !=3.0.*, !=3.1.*, !=3.2.*"
 version = "3.17.0"
 
 [[package]]
-category = "dev"
+category = "main"
 description = "Python 2 and 3 compatibility utilities"
 name = "six"
 optional = false
@@ -237,7 +248,7 @@ python-versions = "*"
 version = "0.1.9"
 
 [metadata]
-content-hash = "b55c6b2244d11c0356dc49e32615244f2b964ac0b903d8613a5e0e453557643f"
+content-hash = "a07afd18095d3d59ba9a855d90c797920c63fd004b7e1cb134a5ec981e7e16b8"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -295,6 +306,9 @@ multidict = [
 packaging = [
     {file = "packaging-20.4-py2.py3-none-any.whl", hash = "sha256:998416ba6962ae7fbd6596850b80e17859a5753ba17c32284f67bfff33784181"},
     {file = "packaging-20.4.tar.gz", hash = "sha256:4357f74f47b9c12db93624a82154e9b120fa8293699949152b22065d556079f8"},
+]
+parsimonious = [
+    {file = "parsimonious-0.8.1.tar.gz", hash = "sha256:3add338892d580e0cb3b1a39e4a1b427ff9f687858fdd61097053742391a9f6b"},
 ]
 path = [
     {file = "path-14.0.1-py3-none-any.whl", hash = "sha256:ed305ab0629859795863afdcd2ff8950af9c1d703527cb8b8aec3b6a425a80ba"},

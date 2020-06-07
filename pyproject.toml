@@ -12,6 +12,7 @@ click = "^7.1.2"
 path = "^14.0.1"
 simplejson = "^3.17.0"
 marshmallow = "^3.6.0"
+parsimonious = "^0.8.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

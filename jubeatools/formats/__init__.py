@@ -16,6 +16,8 @@ from .memon import (
 
 ALIASES = {
     "memon": "memon:v0.2.0",
+    "ichi-retsu": "mono-column",
+    "memo": "memo2",
 }
 
 # Loaders deserialize a folder or a file to a Song object
