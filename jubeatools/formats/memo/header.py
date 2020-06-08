@@ -1,13 +1,13 @@
 """
-Useful things to parse the preamble of analyser-like formats
+Useful things to parse the header of analyser-like formats
 """
 from decimal import Decimal
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Iterable
 
 from parsimonious import Grammar, NodeVisitor
 from parsimonious.expressions import Node
 
-preamble_line_grammar = Grammar(
+header_line_grammar = Grammar(
     r"""
     raw_line        = line comment?
     line            = command? ws
@@ -26,7 +26,7 @@ preamble_line_grammar = Grammar(
 )
 
 
-class PreambleLineVisitor(NodeVisitor):
+class HeaderLineVisitor(NodeVisitor):
 
     """Returns a (key, value) tuple or None if the line contains no useful
     information for the parser (a comment or an empty line)"""
@@ -72,8 +72,22 @@ class PreambleLineVisitor(NodeVisitor):
         return visited_children or node
 
 
-_preamble_line_visitor = PreambleLineVisitor()
+_header_line_visitor = HeaderLineVisitor()
 
 
 def load_preamble_line(line: str) -> Union[Tuple[str, Union[str, Decimal]], None]:
-    _preamble_line_visitor.visit(preamble_line_grammar.parse(line))
+    _header_line_visitor.visit(header_line_grammar.parse(line))
+
+
+def first_non_header_line(lines: Iterable[str]) -> int:
+    """Return the index of the first line on the iterable which does not
+    parse correctly as header line"""
+    res = 0
+    for line in lines:
+        try:
+            header_line_grammar.parse(line)
+        except Exception:
+            break
+        else:
+            res += 1
+    return res
