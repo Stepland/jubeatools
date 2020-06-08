@@ -120,13 +120,13 @@ class Memon_legacy(StrictSchema):
 class Memon_0_1_0(StrictSchema):
     version = fields.String(required=True, validate=validate.OneOf(["0.1.0"]))
     metadata = fields.Nested(MemonMetadata_0_1_0, required=True)
-    data = fields.Dict(keys=fields.String(), values=MemonChart_0_1_0(), required=True)
+    data = fields.Dict(keys=fields.String(), values=fields.Nested(MemonChart_0_1_0), required=True)
 
 
 class Memon_0_2_0(StrictSchema):
     version = fields.String(required=True, validate=validate.OneOf(["0.2.0"]))
     metadata = fields.Nested(MemonMetadata_0_2_0, required=True)
-    data = fields.Dict(keys=fields.String(), values=MemonChart_0_1_0(), required=True)
+    data = fields.Dict(keys=fields.String(), values=fields.Nested(MemonChart_0_1_0), required=True)
 
 
 def _search_and_load(file_or_folder: Path) -> Any:

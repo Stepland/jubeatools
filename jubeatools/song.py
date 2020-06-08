@@ -39,7 +39,7 @@ class NotePosition:
         return self.x + 4 * self.y
 
     @classmethod
-    def from_index(cls: Type[NotePosition], index: int) -> "NotePosition":
+    def from_index(cls: Type["NotePosition"], index: int) -> "NotePosition":
         if not (0 <= index < 16):
             raise ValueError(f"Note position index out of range : {index}")
 
@@ -79,7 +79,7 @@ class Timing:
 class Chart:
     level: Decimal
     timing: Optional[Timing] = None
-    notes: List[Union[TapNote, LongNote]]
+    notes: List[Union[TapNote, LongNote]] = field(default_factory=list)
 
 
 @dataclass
