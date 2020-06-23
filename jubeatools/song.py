@@ -29,7 +29,7 @@ class SecondsTime(Decimal):
     ...
 
 
-@dataclass
+@dataclass(frozen=True)
 class NotePosition:
     x: int
     y: int
@@ -46,13 +46,13 @@ class NotePosition:
         return cls(x=index % 4, y=index // 4)
 
 
-@dataclass
+@dataclass(frozen=True)
 class TapNote:
     time: BeatsTime
     position: NotePosition
 
 
-@dataclass
+@dataclass(frozen=True)
 class LongNote:
     time: BeatsTime
     position: NotePosition

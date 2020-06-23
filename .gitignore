@@ -1,2 +1,4 @@
 *.pyc
 .vscode
+.hypothesis
+.pytest_cache

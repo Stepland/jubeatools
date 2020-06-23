@@ -18,6 +18,7 @@ parsimonious = "^0.8.1"
 pytest = "^5.2"
 rope = "^0.17.0"
 black = "^19.10b0"
+hypothesis = "^5.16.3"
 
 [tool.poetry.scripts]
 jubeatools = 'jubeatools.cli:convert'
