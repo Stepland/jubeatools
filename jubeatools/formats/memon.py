@@ -8,21 +8,21 @@ parse than existing "memo-like" formats (memo, youbeat, etc ...).
 https://github.com/Stepland/memon
 """
 
-from typing import IO, Iterable, Tuple, Any, Dict, Union, List
-from io import BytesIO
+from io import StringIO
 from itertools import chain
+from typing import IO, Any, Dict, Iterable, List, Tuple, Union
 
-from path import Path
 import simplejson as json
 from marshmallow import (
-    Schema,
-    fields,
     RAISE,
+    Schema,
+    ValidationError,
+    fields,
+    post_load,
     validate,
     validates_schema,
-    ValidationError,
-    post_load,
 )
+from path import Path
 
 from jubeatools.song import *
 from jubeatools.utils import lcm
@@ -120,56 +120,47 @@ class Memon_legacy(StrictSchema):
 class Memon_0_1_0(StrictSchema):
     version = fields.String(required=True, validate=validate.OneOf(["0.1.0"]))
     metadata = fields.Nested(MemonMetadata_0_1_0, required=True)
-    data = fields.Dict(keys=fields.String(), values=fields.Nested(MemonChart_0_1_0), required=True)
+    data = fields.Dict(
+        keys=fields.String(), values=fields.Nested(MemonChart_0_1_0), required=True
+    )
 
 
 class Memon_0_2_0(StrictSchema):
     version = fields.String(required=True, validate=validate.OneOf(["0.2.0"]))
     metadata = fields.Nested(MemonMetadata_0_2_0, required=True)
-    data = fields.Dict(keys=fields.String(), values=fields.Nested(MemonChart_0_1_0), required=True)
+    data = fields.Dict(
+        keys=fields.String(), values=fields.Nested(MemonChart_0_1_0), required=True
+    )
 
 
-def _search_and_load(file_or_folder: Path) -> Any:
-
-    """If given a folder, search for a single .memon file then json.load it
-    If given a file, just json.load it"""
-
-    if file_or_folder.isdir():
-        memon_files = file_or_folder.files("*.memon")
-        if len(memon_files) > 1:
-            raise ValueError(f"Multiple memon files found in {file_or_folder}")
-        elif len(memon_files) == 0:
-            raise ValueError(f"No memon file found in {file_or_folder}")
-        file_path = memon_files[0]
-    else:
-        file_path = file_or_folder
-
-    return json.load(open(file_path), use_decimal=True)
+def _load_raw_memon(file: Path) -> dict:
+    with open(file) as f:
+        return json.load(f, use_decimal=True)
 
 
 def _load_memon_note_v0(note: dict, resolution: int) -> Union[TapNote, LongNote]:
     position = NotePosition.from_index(note["n"])
-    time = BeatsTime.from_ticks(ticks=note["t"], resolution=resolution)
+    time = beats_time_from_ticks(ticks=note["t"], resolution=resolution)
     if note["l"] > 0:
-        duration = BeatsTime.from_ticks(ticks=note["l"], resolution=resolution)
+        duration = beats_time_from_ticks(ticks=note["l"], resolution=resolution)
         tail_tip = NotePosition(*P_VALUE_TO_X_Y_OFFSET[note["p"]])
         return LongNote(time, position, duration, tail_tip)
     else:
         return TapNote(time, position)
 
 
-def load_memon_legacy(file_or_folder: Path) -> Song:
-    raw_memon = _search_and_load(file_or_folder)
+def load_memon_legacy(file: Path) -> Song:
+    raw_memon = _load_raw_memon(file)
     schema = Memon_legacy()
     memon = schema.load(raw_memon)
     metadata = Metadata(
         **{key: memon["metadata"][key] for key in ["title", "artist", "audio", "cover"]}
     )
     global_timing = Timing(
-        events=[BPMEvent(time=0, BPM=memon["metadata"]["BPM"])],
+        events=[BPMEvent(time=BeatsTime(0), BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
     )
-    charts: Mapping[str, Chart] = MultiDict()
+    charts = MultiDict()
     for memon_chart in memon["data"]:
         charts.add(
             memon_chart["dif_name"],
@@ -185,18 +176,18 @@ def load_memon_legacy(file_or_folder: Path) -> Song:
     return Song(metadata=metadata, charts=charts, global_timing=global_timing)
 
 
-def load_memon_0_1_0(file_or_folder: Path) -> Song:
-    raw_memon = _search_and_load(file_or_folder)
+def load_memon_0_1_0(file: Path) -> Song:
+    raw_memon = _load_raw_memon(file)
     schema = Memon_0_1_0()
     memon = schema.load(raw_memon)
     metadata = Metadata(
         **{key: memon["metadata"][key] for key in ["title", "artist", "audio", "cover"]}
     )
     global_timing = Timing(
-        events=[BPMEvent(time=0, BPM=memon["metadata"]["BPM"])],
+        events=[BPMEvent(time=BeatsTime(0), BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
     )
-    charts: Mapping[str, Chart] = MultiDict()
+    charts = MultiDict()
     for difficulty, memon_chart in memon["data"]:
         charts.add(
             difficulty,
@@ -212,8 +203,8 @@ def load_memon_0_1_0(file_or_folder: Path) -> Song:
     return Song(metadata=metadata, charts=charts, global_timing=global_timing)
 
 
-def load_memon_0_2_0(file_or_folder: Path) -> Song:
-    raw_memon = _search_and_load(file_or_folder)
+def load_memon_0_2_0(file: Path) -> Song:
+    raw_memon = _load_raw_memon(file)
     schema = Memon_0_2_0()
     memon = schema.load(raw_memon)
     metadata_dict = {
@@ -225,10 +216,10 @@ def load_memon_0_2_0(file_or_folder: Path) -> Song:
 
     metadata = Metadata(**metadata_dict)
     global_timing = Timing(
-        events=[BPMEvent(time=0, BPM=memon["metadata"]["BPM"])],
+        events=[BPMEvent(time=BeatsTime(0), BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
     )
-    charts: Mapping[str, Chart] = MultiDict()
+    charts = MultiDict()
     for difficulty, memon_chart in memon["data"]:
         charts.add(
             difficulty,
@@ -255,7 +246,7 @@ def _long_note_tail_value_v0(note: LongNote) -> int:
         ) from None
 
 
-def check_representable_in_v0(song: Song, version: str) -> None:
+def _raise_if_unfit_for_v0(song: Song, version: str) -> None:
 
     """Raises an exception if the Song object is ill-formed or contains information
     that cannot be represented in a memon v0.x.x file (includes legacy)"""
@@ -277,7 +268,7 @@ def check_representable_in_v0(song: Song, version: str) -> None:
 
     event = song.global_timing.events[0]
     if event.BPM <= 0:
-        raise ValueError("memon:{version} only accepts strictly positive BPMs")
+        raise ValueError(f"memon:{version} only accepts strictly positive BPMs")
 
     if event.time != 0:
         raise ValueError(f"memon:{version} only accepts a BPM on the first beat")
@@ -290,7 +281,7 @@ def check_representable_in_v0(song: Song, version: str) -> None:
 
 
 def _dump_to_json(memon: dict) -> IO:
-    memon_fp = BytesIO()
+    memon_fp = StringIO()
     json.dump(memon, memon_fp, use_decimal=True, indent=4)
     return memon_fp
 
@@ -313,7 +304,7 @@ def _dump_memon_note_v0(
 ) -> Dict[str, int]:
     """converts a note into the {n, t, l, p} form"""
     memon_note = {
-        "n": note.index,
+        "n": note.position.index,
         "t": note.time.numerator * (resolution // note.time.denominator),
         "l": 0,
         "p": 0,
@@ -329,7 +320,7 @@ def _dump_memon_note_v0(
 
 def dump_memon_legacy(song: Song) -> Dict[str, IO]:
 
-    check_representable_in_v0(song, "legacy")
+    _raise_if_unfit_for_v0(song, "legacy")
 
     memon = {
         "metadata": {
@@ -358,12 +349,12 @@ def dump_memon_legacy(song: Song) -> Dict[str, IO]:
             }
         )
 
-    return [(song, _dump_to_json(memon))]
+    return {f"{song.metadata.title}.memon": _dump_to_json(memon)}
 
 
 def dump_memon_0_1_0(song: Song) -> Dict[str, IO]:
 
-    check_representable_in_v0(song, "legacy")
+    _raise_if_unfit_for_v0(song, "legacy")
 
     memon = {
         "version": "0.1.0",
@@ -375,7 +366,7 @@ def dump_memon_0_1_0(song: Song) -> Dict[str, IO]:
             "BPM": song.global_timing.events[0].BPM,
             "offset": -song.global_timing.beat_zero_offset,
         },
-        "data": {},
+        "data": dict(),
     }
     for difficulty, chart in song.charts.items():
         resolution = _compute_resolution(chart.notes)
@@ -388,12 +379,12 @@ def dump_memon_0_1_0(song: Song) -> Dict[str, IO]:
             ],
         }
 
-    return [(song, _dump_to_json(memon))]
+    return {f"{song.metadata.title}.memon": _dump_to_json(memon)}
 
 
 def dump_memon_0_2_0(song: Song) -> Dict[str, IO]:
 
-    check_representable_in_v0(song, "legacy")
+    _raise_if_unfit_for_v0(song, "legacy")
 
     memon = {
         "version": "0.2.0",
@@ -425,4 +416,4 @@ def dump_memon_0_2_0(song: Song) -> Dict[str, IO]:
             ],
         }
 
-    return [(song, _dump_to_json(memon))]
+    return {f"{song.metadata.title}.memon": _dump_to_json(memon)}

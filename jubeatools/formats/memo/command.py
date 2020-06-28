@@ -1,8 +1,9 @@
 """
-Useful things to parse the header of analyser-like formats
+Useful things to parse and dump the header of analyser-like formats
 """
 from decimal import Decimal
-from typing import List, Tuple, Union, Iterable, Optional
+from numbers import Number
+from typing import Any, Iterable, List, Optional, Tuple, Union
 
 from parsimonious import Grammar, NodeVisitor, ParseError
 
@@ -48,12 +49,13 @@ class CommandVisitor(NodeVisitor):
 
     def visit_quoted_value(self, node, visited_children):
         self.value = node.text
-    
+
     def visit_number(self, node, visited_children):
         self.value = node.text
 
     def generic_visit(self, node, visited_children):
         ...
+
 
 def is_command(line: str) -> bool:
     try:
@@ -63,6 +65,7 @@ def is_command(line: str) -> bool:
     else:
         return True
 
+
 def parse_command(line: str) -> Tuple[str, str]:
     try:
         return CommandVisitor().visit(command_grammar.parse(line))
@@ -71,3 +74,19 @@ def parse_command(line: str) -> Tuple[str, str]:
             raise ParseError(f"Invalid command syntax : {line}") from None
         else:
             raise
+
+
+def dump_command(key: str, value: Any) -> str:
+    if len(key) == 1:
+        key_part = key
+    else:
+        key_part = f"#{key}"
+
+    if isinstance(value, Number):
+        value_part = f"={value}"
+    elif value is not None:
+        value_part = f'="{value}"'
+    else:
+        value_part = ""
+
+    return key_part + value_part

@@ -7,26 +7,23 @@ Precision-critical times are stored as a fraction of beats,
 otherwise a decimal number of seconds can be used
 """
 
+from collections import UserList, namedtuple
 from dataclasses import dataclass, field
-from collections import namedtuple, UserList
 from decimal import Decimal
 from fractions import Fraction
-from typing import List, Optional, Union, Mapping, Type
+from typing import List, Mapping, Optional, Type, Union
 
-from path import Path
 from multidict import MultiDict
+from path import Path
+
+BeatsTime = Fraction
+SecondsTime = Decimal
 
 
-class BeatsTime(Fraction):
-    @classmethod
-    def from_ticks(cls: Type[Fraction], ticks: int, resolution: int) -> "BeatsTime":
-        if resolution < 1:
-            raise ValueError(f"resolution cannot be negative : {resolution}")
-        return cls(ticks, resolution)
-
-
-class SecondsTime(Decimal):
-    ...
+def beats_time_from_ticks(ticks: int, resolution: int) -> BeatsTime:
+    if resolution < 1:
+        raise ValueError(f"resolution cannot be negative : {resolution}")
+    return BeatsTime(ticks, resolution)
 
 
 @dataclass(frozen=True)
@@ -37,6 +34,9 @@ class NotePosition:
     @property
     def index(self):
         return self.x + 4 * self.y
+
+    def as_tuple(self):
+        return (self.x, self.y)
 
     @classmethod
     def from_index(cls: Type["NotePosition"], index: int) -> "NotePosition":
