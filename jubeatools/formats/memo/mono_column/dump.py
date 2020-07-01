@@ -91,7 +91,7 @@ class MonoColumnDumpedSection:
         frames: List[Dict[Tuple[int, int], str]] = []
         frame: Dict[Tuple[int, int], str] = {}
         symbols: Dict[BeatsTime, str] = ChainMap(
-            BEATS_TIME_TO_SYMBOL, self.extra_symbols
+            self.extra_symbols, BEATS_TIME_TO_SYMBOL
         )
         for note in self.notes:
             pos = note.position.as_tuple()

@@ -44,6 +44,30 @@ class NotePosition:
             raise ValueError(f"Note position index out of range : {index}")
 
         return cls(x=index % 4, y=index // 4)
+    
+    def __lt__(self, other):
+        if not isinstance(other, NotePosition):
+            try:
+                x, y = other
+            except ValueError:
+                raise ValueError(f"Cannot add NotePosition with {type(other).__name__}")
+        else:
+            x = other.x
+            y = other.y
+
+        return self.as_tuple() < (x, y)
+
+    def __add__(self, other):
+        if not isinstance(other, NotePosition):
+            try:
+                x, y = other
+            except ValueError:
+                raise ValueError(f"Cannot add NotePosition with {type(other).__name__}")
+        else:
+            x = other.x
+            y = other.y
+
+        return NotePosition(self.x+x, self.y+y)
 
 
 @dataclass(frozen=True)

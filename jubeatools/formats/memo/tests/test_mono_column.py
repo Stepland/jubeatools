@@ -1,5 +1,7 @@
 from typing import Iterable, Union
 
+import pytest
+
 from jubeatools.song import BeatsTime, LongNote, NotePosition, TapNote
 
 from ..mono_column.load import MonoColumnParser
@@ -216,5 +218,102 @@ def test_irregular_beats_per_frame_2():
         TapNote(BeatsTime("1.00"), NotePosition(1, 1)),
         TapNote(BeatsTime("2.00"), NotePosition(2, 2)),
         TapNote(BeatsTime("4.75"), NotePosition(3, 3)),
+    ]
+    compare_chart_notes(chart, expected)
+
+def test_long_notes():
+    chart = """
+        #holdbyarrow=1
+        ①□□＜
+        □□□□
+        □□□□
+        □□□□
+        --
+        ①□□□
+        □□□□
+        □□□□
+        □□□□
+        --
+        """
+    expected = [
+        LongNote(
+            time=BeatsTime(0),
+            position=NotePosition(0, 0),
+            duration=BeatsTime(4),
+            tail_tip=NotePosition(3,0),
+        )
+    ]
+    compare_chart_notes(chart, expected)
+
+def test_long_notes_ambiguous_case():
+    chart = """
+        #holdbyarrow=1
+        ①①＜＜
+        □□□□
+        □□□□
+        □□□□
+        --
+        ①①□□
+        □□□□
+        □□□□
+        □□□□
+        --
+        """
+    expected = [
+        LongNote(BeatsTime(0), NotePosition(x, y), BeatsTime(4), NotePosition(tx, ty))
+        for (x, y), (tx, ty) in [
+            ((0, 0), (2, 0)),
+            ((1, 0), (3, 0)),
+        ]
+    ]
+    with pytest.warns(UserWarning):
+        compare_chart_notes(chart, expected)
+
+@pytest.mark.filterwarnings("error")
+def test_long_notes_simple_solution_no_warning():
+    chart = """
+        #holdbyarrow=1
+        □□□□
+        ＞①①＜
+        □□□□
+        □□□□
+        --
+        □□□□
+        □①①□
+        □□□□
+        □□□□
+        --
+        """
+    expected = [
+        LongNote(BeatsTime(0), NotePosition(x, y), BeatsTime(4), NotePosition(tx, ty))
+        for (x, y), (tx, ty) in [
+            ((1, 1), (0, 1)),
+            ((2, 1), (3, 1)),
+        ]
+    ]
+    compare_chart_notes(chart, expected)
+
+
+def test_long_notes_complex_case():
+    chart = """
+        #holdbyarrow=1
+        □□□□
+        □□∨□
+        □∨□□
+        ＞①①①
+        --
+        □□□□
+        □□□□
+        □□□□
+        □①①①
+        --
+        """
+    expected = [
+        LongNote(BeatsTime(0), NotePosition(x, y), BeatsTime(4), NotePosition(tx, ty))
+        for (x, y), (tx, ty) in [
+            ((1, 3), (1, 2)),
+            ((2, 3), (2, 1)),
+            ((3, 3), (0, 3)),
+        ]
     ]
     compare_chart_notes(chart, expected)
