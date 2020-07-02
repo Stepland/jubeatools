@@ -18,7 +18,7 @@ command_grammar = Grammar(
     equals_value    = ws "=" ws value
     value           = value_in_quotes / number
     value_in_quotes = '"' quoted_value '"'
-    quoted_value    = ~r"[^\"]+"
+    quoted_value    = ~r"[^\"]*"
     number          = ~r"\d+(\.\d+)?"
     ws              = ~r"[\t ]*"
     comment         = ~r"//.*"

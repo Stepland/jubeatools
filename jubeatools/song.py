@@ -11,7 +11,8 @@ from collections import UserList, namedtuple
 from dataclasses import dataclass, field
 from decimal import Decimal
 from fractions import Fraction
-from typing import List, Mapping, Optional, Type, Union
+from functools import wraps
+from typing import Iterator, List, Mapping, Optional, Type, Union
 
 from multidict import MultiDict
 from path import Path
@@ -26,10 +27,32 @@ def beats_time_from_ticks(ticks: int, resolution: int) -> BeatsTime:
     return BeatsTime(ticks, resolution)
 
 
+def convert_other(f):
+    @wraps(f)
+    def wrapped(self, other):
+        if isinstance(other, NotePosition):
+            other_note = other
+        else:
+            try:
+                other_note = NotePosition(*other)
+            except Exception:
+                raise ValueError(
+                    f"Invalid type for {f.__name__} with NotePosition : {type(other).__name__}"
+                )
+
+        return f(self, other_note)
+
+    return wrapped
+
+
 @dataclass(frozen=True)
 class NotePosition:
     x: int
     y: int
+
+    def __iter__(self):
+        yield self.x
+        yield self.y
 
     @property
     def index(self):
@@ -44,30 +67,18 @@ class NotePosition:
             raise ValueError(f"Note position index out of range : {index}")
 
         return cls(x=index % 4, y=index // 4)
-    
+
+    @convert_other
     def __lt__(self, other):
-        if not isinstance(other, NotePosition):
-            try:
-                x, y = other
-            except ValueError:
-                raise ValueError(f"Cannot add NotePosition with {type(other).__name__}")
-        else:
-            x = other.x
-            y = other.y
+        return self.as_tuple() < other.as_tuple()
 
-        return self.as_tuple() < (x, y)
-
+    @convert_other
     def __add__(self, other):
-        if not isinstance(other, NotePosition):
-            try:
-                x, y = other
-            except ValueError:
-                raise ValueError(f"Cannot add NotePosition with {type(other).__name__}")
-        else:
-            x = other.x
-            y = other.y
+        return NotePosition(self.x + other.x, self.y + other.y)
 
-        return NotePosition(self.x+x, self.y+y)
+    @convert_other
+    def __sub__(self, other):
+        return NotePosition(self.x - other.x, self.y - other.y)
 
 
 @dataclass(frozen=True)
@@ -85,6 +96,28 @@ class LongNote:
 
     def __hash__(self):
         return hash((self.time, self.position))
+
+    def tail_is_straight(self) -> bool:
+        return (self.position.x == self.tail_tip.x) or (
+            self.position.y == self.tail_tip.y
+        )
+
+    def tail_direction(self) -> NotePosition:
+        if not self.tail_is_straight():
+            raise ValueError("Can't get tail direction when it's not straight")
+        diff = self.tail_tip - self.position
+        if diff.x == 0:
+            diff.y //= abs(diff.y)
+        else:
+            diff.x //= abs(diff.x)
+        return diff
+
+    def positions_covered(self) -> Iterator[NotePosition]:
+        direction = self.tail_direction()
+        position = self.position
+        while position != self.tail_tip:
+            yield position
+            position = position + direction
 
 
 @dataclass

@@ -1,4 +1,5 @@
 import re
+import warnings
 from collections import Counter
 from copy import deepcopy
 from dataclasses import dataclass
@@ -6,7 +7,6 @@ from decimal import Decimal
 from enum import Enum
 from itertools import product
 from typing import Dict, Iterator, List, Set, Tuple
-import warnings
 
 import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
@@ -28,6 +28,7 @@ from jubeatools.song import (
 
 from ..command import is_command, parse_command
 from ..symbol import is_symbol_definition, parse_symbol_definition
+from .commons import NOTE_SYMBOLS, CIRCLE_FREE_SYMBOLS
 
 mono_column_chart_line_grammar = Grammar(
     r"""
@@ -78,8 +79,6 @@ def is_empty_line(line: str) -> bool:
 
 
 DIFFICULTIES = {1: "BSC", 2: "ADV", 3: "EXT"}
-
-NOTE_SYMBOLS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿"
 
 SYMBOL_TO_DECIMAL_TIME = {
     symbol: Decimal("0.25") * index for index, symbol in enumerate(NOTE_SYMBOLS)
@@ -184,49 +183,33 @@ LONG_DIRECTION = {
     **{c: (0, -1) for c in LONG_ARROW_UP},
 }
 
-CIRCLE_FREE_SYMBOLS = {
-    "１",  #  ⎫
-    "２",  #  ⎪
-    "３",  #  ⎪
-    "４",  #  ⎪
-    "５",  #  ⎬ FULLWIDTH
-    "６",  #  ⎪
-    "７",  #  ⎪
-    "８",  #  ⎪
-    "９",  #  ⎭
-    "10",  #  ⎫
-    "11",  #  ⎪
-    "12",  #  ⎪
-    "13",  #  ⎪
-    "14",  #  ⎪
-    "15",  #  ⎬ HALFWIDTH
-    "16",  #  ⎪
-    "17",  #  ⎪
-    "18",  #  ⎪
-    "19",  #  ⎪
-    "20",  #  ⎭
-}
-
 CIRCLE_FREE_TO_DECIMAL_TIME = {
     c: Decimal("0.25") * i for i, c in enumerate(CIRCLE_FREE_SYMBOLS)
 }
 
-def _distance(a: NotePosition, b: NotePosition) -> float:
-    return abs(complex(*a.as_tuple())-complex(*b.as_tuple()))
 
-def _long_note_solution_heuristic(solution: Dict[NotePosition, NotePosition]) -> Tuple[int, int, int]:
-    c = Counter(int(_distance(k,v)) for k,v in solution.items())
+def _distance(a: NotePosition, b: NotePosition) -> float:
+    return abs(complex(*a.as_tuple()) - complex(*b.as_tuple()))
+
+
+def _long_note_solution_heuristic(
+    solution: Dict[NotePosition, NotePosition]
+) -> Tuple[int, int, int]:
+    c = Counter(int(_distance(k, v)) for k, v in solution.items())
     return (c[3], c[2], c[1])
+
 
 def _is_simple_solution(solution, domains) -> bool:
     return all(
-        solution[v] == min(domains[v], key=lambda e: _distance(e,v))
+        solution[v] == min(domains[v], key=lambda e: _distance(e, v))
         for v in solution.keys()
     )
+
 
 def decimal_to_beats(current_beat: Decimal, symbol_timing: Decimal) -> BeatsTime:
     decimal_time = current_beat + symbol_timing
     return BeatsTime(decimal_time).limit_denominator(240)
+
 
 class MonoColumnParser:
     def __init__(self):
@@ -393,8 +376,10 @@ class MonoColumnParser:
             yield from self._iter_notes()
         else:
             yield from self._iter_notes_without_longs()
-    
-    def _iter_blocs(self) -> Iterator[Tuple[Decimal, MonoColumnLoadedSection, List[List[str]]]]:
+
+    def _iter_blocs(
+        self,
+    ) -> Iterator[Tuple[Decimal, MonoColumnLoadedSection, List[List[str]]]]:
         current_beat = Decimal(0)
         for section in self.sections:
             for bloc in section.blocs():
@@ -405,7 +390,7 @@ class MonoColumnParser:
         unfinished_longs: Dict[NotePosition, UnfinishedLongNote] = {}
         for current_beat, section, bloc in self._iter_blocs():
             should_skip: Set[NotePosition] = set()
-            
+
             # 1/3 : look for ends to unfinished long notes
             for pos, unfinished_long in unfinished_longs.items():
                 x, y = pos.as_tuple()
@@ -427,10 +412,9 @@ class MonoColumnParser:
                         symbol_time = section.symbols[symbol]
                         note_time = decimal_to_beats(current_beat, symbol_time)
                         yield unfinished_long.ends_at(note_time)
-            
+
             unfinished_longs = {
-                k: unfinished_longs[k]
-                for k in unfinished_longs.keys() - should_skip
+                k: unfinished_longs[k] for k in unfinished_longs.keys() - should_skip
             }
 
             # 2/3 : look for new long notes starting on this bloc
@@ -468,14 +452,17 @@ class MonoColumnParser:
                 solutions = problem.getSolutions()
                 if not solutions:
                     raise SyntaxError(
-                        "Invalid long note arrow pattern in bloc :\n"+
-                        "\n".join(''.join(line) for line in bloc)
+                        "Invalid long note arrow pattern in bloc :\n"
+                        + "\n".join("".join(line) for line in bloc)
                     )
                 solution = min(solutions, key=_long_note_solution_heuristic)
-                if len(solutions) > 1 and not _is_simple_solution(solution, arrow_to_note_candidates):
+                if len(solutions) > 1 and not _is_simple_solution(
+                    solution, arrow_to_note_candidates
+                ):
                     warnings.warn(
-                        "Ambiguous arrow pattern in bloc :\n"+
-                        "\n".join(''.join(line) for line in bloc)+"\n"
+                        "Ambiguous arrow pattern in bloc :\n"
+                        + "\n".join("".join(line) for line in bloc)
+                        + "\n"
                         "The resulting long notes might not be what you expect"
                     )
                 for arrow_pos, note_pos in solution.items():
@@ -485,11 +472,9 @@ class MonoColumnParser:
                     symbol_time = section.symbols[symbol]
                     note_time = decimal_to_beats(current_beat, symbol_time)
                     unfinished_longs[note_pos] = UnfinishedLongNote(
-                        time=note_time,
-                        position=note_pos,
-                        tail_tip=arrow_pos,
+                        time=note_time, position=note_pos, tail_tip=arrow_pos,
                     )
-            
+
             # 3/3 : find regular notes
             for y, x in product(range(4), range(4)):
                 position = NotePosition(x, y)
@@ -500,7 +485,6 @@ class MonoColumnParser:
                     symbol_time = section.symbols[symbol]
                     note_time = decimal_to_beats(current_beat, symbol_time)
                     yield TapNote(note_time, position)
-                
 
     def _iter_notes_without_longs(self) -> Iterator[TapNote]:
         current_beat = Decimal(0)
@@ -544,7 +528,9 @@ def load_mono_column(path: Path) -> Song:
     )
     charts = {
         state.difficulty: Chart(
-            level=state.level, timing=timing, notes=list(state.notes())
+            level=state.level,
+            timing=timing,
+            notes=sorted(state.notes(), key=lambda n: (n.time, n.position)),
         )
     }
     return Song(metadata=metadata, charts=charts)

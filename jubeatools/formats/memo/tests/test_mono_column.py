@@ -221,6 +221,7 @@ def test_irregular_beats_per_frame_2():
     ]
     compare_chart_notes(chart, expected)
 
+
 def test_long_notes():
     chart = """
         #holdbyarrow=1
@@ -240,10 +241,11 @@ def test_long_notes():
             time=BeatsTime(0),
             position=NotePosition(0, 0),
             duration=BeatsTime(4),
-            tail_tip=NotePosition(3,0),
+            tail_tip=NotePosition(3, 0),
         )
     ]
     compare_chart_notes(chart, expected)
+
 
 def test_long_notes_ambiguous_case():
     chart = """
@@ -261,13 +263,11 @@ def test_long_notes_ambiguous_case():
         """
     expected = [
         LongNote(BeatsTime(0), NotePosition(x, y), BeatsTime(4), NotePosition(tx, ty))
-        for (x, y), (tx, ty) in [
-            ((0, 0), (2, 0)),
-            ((1, 0), (3, 0)),
-        ]
+        for (x, y), (tx, ty) in [((0, 0), (2, 0)), ((1, 0), (3, 0)),]
     ]
     with pytest.warns(UserWarning):
         compare_chart_notes(chart, expected)
+
 
 @pytest.mark.filterwarnings("error")
 def test_long_notes_simple_solution_no_warning():
@@ -286,10 +286,7 @@ def test_long_notes_simple_solution_no_warning():
         """
     expected = [
         LongNote(BeatsTime(0), NotePosition(x, y), BeatsTime(4), NotePosition(tx, ty))
-        for (x, y), (tx, ty) in [
-            ((1, 1), (0, 1)),
-            ((2, 1), (3, 1)),
-        ]
+        for (x, y), (tx, ty) in [((1, 1), (0, 1)), ((2, 1), (3, 1)),]
     ]
     compare_chart_notes(chart, expected)
 
@@ -310,10 +307,27 @@ def test_long_notes_complex_case():
         """
     expected = [
         LongNote(BeatsTime(0), NotePosition(x, y), BeatsTime(4), NotePosition(tx, ty))
-        for (x, y), (tx, ty) in [
-            ((1, 3), (1, 2)),
-            ((2, 3), (2, 1)),
-            ((3, 3), (0, 3)),
-        ]
+        for (x, y), (tx, ty) in [((1, 3), (1, 2)), ((2, 3), (2, 1)), ((3, 3), (0, 3)),]
+    ]
+    compare_chart_notes(chart, expected)
+
+
+def test_circle_free():
+    chart = """
+        #holdbyarrow=1
+        #circlefree=1
+        □□□□
+        □□□□
+        □□□□
+        ＞□□①
+        --
+        □□□□
+        □□□□
+        □□□□
+        □□□13
+        --
+        """
+    expected = [
+        LongNote(BeatsTime(0), NotePosition(3, 3), BeatsTime(7), NotePosition(0, 3))
     ]
     compare_chart_notes(chart, expected)
