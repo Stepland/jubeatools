@@ -105,19 +105,20 @@ class LongNote:
     def tail_direction(self) -> NotePosition:
         if not self.tail_is_straight():
             raise ValueError("Can't get tail direction when it's not straight")
-        diff = self.tail_tip - self.position
-        if diff.x == 0:
-            diff.y //= abs(diff.y)
+        x, y = (self.tail_tip - self.position).as_tuple()
+        if x == 0:
+            y //= abs(y)
         else:
-            diff.x //= abs(diff.x)
-        return diff
+            x //= abs(x)
+        return NotePosition(x, y)
 
     def positions_covered(self) -> Iterator[NotePosition]:
         direction = self.tail_direction()
         position = self.position
+        yield position
         while position != self.tail_tip:
-            yield position
             position = position + direction
+            yield position
 
 
 @dataclass
@@ -140,13 +141,18 @@ class Chart:
 
 
 @dataclass
+class Preview:
+    start: SecondsTime
+    length: SecondsTime
+
+
+@dataclass
 class Metadata:
     title: str
     artist: str
     audio: Path
     cover: Path
-    preview_start: SecondsTime = SecondsTime(0)
-    preview_length: SecondsTime = SecondsTime(0)
+    preview: Optional[Preview] = None
 
 
 @dataclass

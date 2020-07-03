@@ -28,7 +28,7 @@ from jubeatools.song import (
 
 from ..command import is_command, parse_command
 from ..symbol import is_symbol_definition, parse_symbol_definition
-from .commons import NOTE_SYMBOLS, CIRCLE_FREE_SYMBOLS
+from .commons import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 mono_column_chart_line_grammar = Grammar(
     r"""
