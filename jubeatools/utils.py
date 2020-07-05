@@ -9,4 +9,4 @@ def single_lcm(a: int, b: int):
 
 def lcm(*args):
     """Return lcm of args."""
-    return reduce(single_lcm, args)
+    return reduce(single_lcm, args, 1)

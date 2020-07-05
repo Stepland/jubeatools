@@ -143,7 +143,7 @@ def _load_memon_note_v0(note: dict, resolution: int) -> Union[TapNote, LongNote]
     time = beats_time_from_ticks(ticks=note["t"], resolution=resolution)
     if note["l"] > 0:
         duration = beats_time_from_ticks(ticks=note["l"], resolution=resolution)
-        tail_tip = NotePosition(*P_VALUE_TO_X_Y_OFFSET[note["p"]])
+        tail_tip = position + NotePosition(*P_VALUE_TO_X_Y_OFFSET[note["p"]])
         return LongNote(time, position, duration, tail_tip)
     else:
         return TapNote(time, position)
@@ -188,7 +188,7 @@ def load_memon_0_1_0(file: Path) -> Song:
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
     )
     charts = MultiDict()
-    for difficulty, memon_chart in memon["data"]:
+    for difficulty, memon_chart in memon["data"].items():
         charts.add(
             difficulty,
             Chart(
@@ -210,9 +210,11 @@ def load_memon_0_2_0(file: Path) -> Song:
     metadata_dict = {
         key: memon["metadata"][key] for key in ["title", "artist", "audio", "cover"]
     }
+    preview = None
     if "preview" in memon["metadata"]:
-        metadata_dict["preview_start"] = memon["metadata"]["preview"]["position"]
-        metadata_dict["preview_length"] = memon["metadata"]["preview"]["length"]
+        start = memon["metadata"]["preview"]["position"]
+        length = memon["metadata"]["preview"]["length"]
+        metadata_dict["preview"] = Preview(start, length)
 
     metadata = Metadata(**metadata_dict)
     global_timing = Timing(
@@ -220,7 +222,7 @@ def load_memon_0_2_0(file: Path) -> Song:
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
     )
     charts = MultiDict()
-    for difficulty, memon_chart in memon["data"]:
+    for difficulty, memon_chart in memon["data"].items():
         charts.add(
             difficulty,
             Chart(
@@ -280,7 +282,7 @@ def _raise_if_unfit_for_v0(song: Song, version: str) -> None:
             )
 
 
-def _dump_to_json(memon: dict) -> IO:
+def _dump_to_json(memon: dict) -> StringIO:
     memon_fp = StringIO()
     json.dump(memon, memon_fp, use_decimal=True, indent=4)
     return memon_fp
@@ -399,10 +401,10 @@ def dump_memon_0_2_0(song: Song) -> Dict[str, IO]:
         "data": {},
     }
 
-    if song.metadata.preview_length != 0:
+    if song.metadata.preview is not None:
         memon["metadata"]["preview"] = {
-            "position": song.metadata.preview_start,
-            "length": song.metadata.preview_length,
+            "position": song.metadata.preview.start,
+            "length": song.metadata.preview.length,
         }
 
     for difficulty, chart in song.charts.items():

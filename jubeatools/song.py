@@ -3,8 +3,8 @@ Provides the Song class, the central model for chartsets
 Every input format is converted to a Song instance
 Every output format is created from a Song instance
 
-Precision-critical times are stored as a fraction of beats,
-otherwise a decimal number of seconds can be used
+Most timing-related info is stored as beat fractions,
+otherwise a decimal number of seconds is used
 """
 
 from collections import UserList, namedtuple
@@ -92,6 +92,8 @@ class LongNote:
     time: BeatsTime
     position: NotePosition
     duration: BeatsTime
+    # tail_tip starting position as absolute position on the
+    # playfield
     tail_tip: NotePosition
 
     def __hash__(self):
