@@ -8,7 +8,7 @@ from path import Path
 
 from jubeatools.song import Song
 
-from .memo.mono_column import dump_mono_column, load_mono_column
+from .jubeat_analyser.mono_column import dump_mono_column, load_mono_column
 from .memon import (
     dump_memon_0_1_0,
     dump_memon_0_2_0,

@@ -7,6 +7,7 @@ from decimal import Decimal
 from enum import Enum
 from itertools import product
 from typing import Dict, Iterator, List, Set, Tuple
+from functools import reduce
 
 import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
@@ -27,8 +28,10 @@ from jubeatools.song import (
 )
 
 from ..command import is_command, parse_command
-from ..symbol import is_symbol_definition, parse_symbol_definition
-from .commons import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
+from ..files import load_files
+from ..parser import JubeatAnalyserParser
+from ..symbol_definition import is_symbol_definition, parse_symbol_definition
+from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 mono_column_chart_line_grammar = Grammar(
     r"""
@@ -211,127 +214,23 @@ def decimal_to_beats(current_beat: Decimal, symbol_timing: Decimal) -> BeatsTime
     return BeatsTime(decimal_time).limit_denominator(240)
 
 
-class MonoColumnParser:
+class MonoColumnParser(JubeatAnalyserParser):
     def __init__(self):
-        self.music = None
-        self.symbols = deepcopy(SYMBOL_TO_DECIMAL_TIME)
-        self.current_beat = Decimal("0")
-        self.current_tempo = None
-        self.current_chart_lines = []
-        self.timing_events = []
-        self.offset = 0
-        self.beats_per_section = 4
-        self.bytes_per_panel = 2
-        self.level = 1
-        self.difficulty = None
-        self.title = None
-        self.artist = None
-        self.jacket = None
-        self.preview_start = None
-        self.hold_by_arrow = False
-        self.circle_free = False
+        super().__init__()
         self.sections: List[MonoColumnLoadedSection] = []
-
-    def handle_command(self, command, value=None):
-        try:
-            method = getattr(self, f"do_{command}")
-        except AttributeError:
-            raise SyntaxError(f"Unknown analyser command : {command}") from None
-
-        if value is not None:
-            method(value)
-        else:
-            method()
-
-    def do_m(self, value):
-        self.music = value
-
-    def do_t(self, value):
-        self.current_tempo = Decimal(value)
-        self.timing_events.append(BPMEvent(self.current_beat, BPM=self.current_tempo))
-
-    def do_o(self, value):
-        self.offset = int(value)
-
-    def do_b(self, value):
-        self.beats_per_section = Decimal(value)
 
     def do_memo(self):
         raise ValueError("This is not a mono-column file")
 
     do_boogie = do_memo2 = do_memo1 = do_memo
 
-    def do_pw(self, value):
-        if int(value) != 4:
-            raise ValueError("jubeatools only supports 4×4 charts")
-
-    do_ph = do_pw
-
-    def do_lev(self, value):
-        self.level = int(value)
-
-    def do_dif(self, value):
-        dif = int(value)
-        if dif <= 0:
-            raise ValueError(f"Unknown chart difficulty : {dif}")
-        if dif < 4:
-            self.difficulty = DIFFICULTIES[dif]
-        else:
-            self.difficulty = f"EDIT-{dif-3}"
-
-    def do_title(self, value):
-        self.title = value
-
-    def do_artist(self, value):
-        self.artist = value
-
-    def do_jacket(self, value):
-        self.jacket = value
-
-    def do_prevpos(self, value):
-        self.preview_start = int(value)
-
     def do_bpp(self, value):
-        bpp = int(value)
         if self.sections:
             raise ValueError(
                 "jubeatools does not handle changing the bytes per panel value halfway"
             )
-        elif bpp not in (1, 2):
-            raise ValueError(f"Unexcpected bpp value : {value}")
-        elif self.circle_free and bpp == 1:
-            raise ValueError("#bpp can only be 2 when #circlefree is activated")
         else:
-            self.bytes_per_panel = int(value)
-
-    def do_holdbyarrow(self, value):
-        self.hold_by_arrow = int(value) == 1
-
-    def do_holdbytilde(self, value):
-        if int(value):
-            raise ValueError("jubeatools does not support #holdbytilde")
-
-    def do_circlefree(self, raw_value):
-        activate = bool(int(raw_value))
-        if activate and self.bytes_per_panel != 2:
-            raise ValueError("#circlefree can only be activated when #bpp=2")
-        self.circle_free = activate
-
-    def define_symbol(self, symbol: str, timing: Decimal):
-        bpp = self.bytes_per_panel
-        length_as_shift_jis = len(symbol.encode("shift_jis_2004"))
-        if length_as_shift_jis != bpp:
-            raise ValueError(
-                f"Invalid symbol definition. Since #bpp={bpp}, timing symbols "
-                f"should be {bpp} bytes long but '{symbol}' is {length_as_shift_jis}"
-            )
-        if timing > self.beats_per_section:
-            message = (
-                "Invalid symbol definition conscidering the number of beats per section :\n"
-                f"*{symbol}:{timing}"
-            )
-            raise ValueError(message)
-        self.symbols[symbol] = timing
+            super().do_bpp(value)
 
     def move_to_next_section(self):
         if len(self.current_chart_lines) % 4 != 0:
@@ -369,7 +268,7 @@ class MonoColumnParser:
         elif is_separator(line):
             self.move_to_next_section()
         elif not is_empty_line(line):
-            raise SyntaxError(f"not a valid #memo line : {line}")
+            raise SyntaxError(f"not a valid mono-column file line : {line}")
 
     def notes(self) -> Iterator[Union[TapNote, LongNote]]:
         if self.hold_by_arrow:
@@ -500,12 +399,15 @@ class MonoColumnParser:
 
 
 def load_mono_column(path: Path) -> Song:
-    # The vast majority of memo files you will encounter will be propely
-    # decoded using shift_jis_2004. Get ready for endless fun with the small
-    # portion of files that won't
-    with open(path, encoding="shift_jis_2004") as f:
-        lines = f.readlines()
+    files = load_files(path)
+    charts = [
+        _load_mono_column_file(lines)
+        for _, lines in files.items()
+    ]
+    return reduce(lambda a, b: a.merge(b), charts)
+    
 
+def _load_mono_column_file(lines: List[str]) -> Song:
     state = MonoColumnParser()
     for i, raw_line in enumerate(lines):
         try:

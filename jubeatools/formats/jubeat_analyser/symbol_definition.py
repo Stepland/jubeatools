@@ -1,5 +1,5 @@
 """
-Beat symbol definition
+Note symbol definition
 """
 from decimal import Decimal
 from typing import Optional, Tuple

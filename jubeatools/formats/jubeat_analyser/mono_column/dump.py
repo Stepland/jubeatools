@@ -23,7 +23,7 @@ from jubeatools.song import (
 )
 
 from ..command import dump_command
-from .commons import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
+from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 COMMAND_ORDER = [
     "b",

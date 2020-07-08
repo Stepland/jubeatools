@@ -1,6 +1,29 @@
 """
-Useful things to parse and dump the header of analyser-like formats
+Useful things to parse and dump the jubeat analyser command format
+
+Known simple commands :
+  - b=<decimal>   : beats per measure (4 by default)
+  - m="<path>"    : music file path
+  - o=<int>       : offset in ms (100 by default)
+  - r=<int>       : ? increase the offset ? (in ms) (not supported, couldn't find any examples, wtf is it for ?)
+  - t=<decimal>   : tempo
+  
+Known hash commands :
+  - #memo             # youbeat-like format but a bar division always means a 1/4 note (amongst other quirks)
+  - #memo1            # youbeat-like but without bpm changes in the bar
+  - #memo2            # youbeat-like with memo symbols
+  - #boogie           # youbeat-like
+  - #pw=<int>         # number of panels horizontally (4 by default)
+  - #ph=<int>         # number of panels vertically (4 by default)
+  - #lev=<int>        # chart level (typically 1 to 10)
+  - #dif={1, 2, 3}    # 1: BSC, 2: ADV, 3: EXT
+  - #title="<str>"    # music title
+  - #artist="<str>"   # artist's name
+  - #jacket="<path>"  # music cover art path
+  - #prevpos=<int>    # preview start (in ms)
+  - #bpp              # bytes per panel (2 by default)
 """
+
 from decimal import Decimal
 from numbers import Number
 from typing import Any, Iterable, List, Optional, Tuple, Union

@@ -1,3 +1,5 @@
+"""Usual symbols for memo files"""
+
 NOTE_SYMBOLS = [
     "①",
     "②",
