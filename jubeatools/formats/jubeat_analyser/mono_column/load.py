@@ -5,9 +5,9 @@ from copy import deepcopy
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
+from functools import reduce
 from itertools import product
 from typing import Dict, Iterator, List, Set, Tuple
-from functools import reduce
 
 import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
@@ -29,7 +29,18 @@ from jubeatools.song import (
 
 from ..command import is_command, parse_command
 from ..files import load_files
-from ..parser import JubeatAnalyserParser
+from ..parser import (
+    CIRCLE_FREE_TO_DECIMAL_TIME,
+    LONG_ARROWS,
+    LONG_DIRECTION,
+    JubeatAnalyserParser,
+    UnfinishedLongNote,
+    decimal_to_beats,
+    is_empty_line,
+    is_simple_solution,
+    long_note_solution_heuristic,
+    split_double_byte_line,
+)
 from ..symbol_definition import is_symbol_definition, parse_symbol_definition
 from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
@@ -74,35 +85,11 @@ def is_separator(line: str) -> bool:
     return bool(SEPARATOR.match(line))
 
 
-EMPTY_LINE = re.compile(r"\s*(//.*)?")
-
-
-def is_empty_line(line: str) -> bool:
-    return bool(EMPTY_LINE.match(line))
-
-
 DIFFICULTIES = {1: "BSC", 2: "ADV", 3: "EXT"}
 
 SYMBOL_TO_DECIMAL_TIME = {
     symbol: Decimal("0.25") * index for index, symbol in enumerate(NOTE_SYMBOLS)
 }
-
-
-def split_chart_line(line: str) -> List[str]:
-    """Split a #bpp=2 chart line into symbols :
-    Given the symbol definition : *25:6
-    >>> split_chart_line("25口口25")
-    ... ["25","口","口","25"]
-    >>> split_chart_line("口⑪①25")
-    ... ["口","⑪","①","25"]
-    """
-    encoded_line = line.encode("shift_jis_2004")
-    if len(encoded_line) % 2 != 0:
-        raise ValueError(f"Invalid chart line : {line}")
-    symbols = []
-    for i in range(0, len(encoded_line), 2):
-        symbols.append(encoded_line[i : i + 2].decode("shift_jis_2004"))
-    return symbols
 
 
 @dataclass
@@ -125,93 +112,12 @@ class MonoColumnLoadedSection:
         if bpp not in (1, 2):
             raise ValueError(f"Invalid bpp : {bpp}")
         elif bpp == 2:
-            split_line = split_chart_line
+            split_line = split_double_byte_line
         else:
             split_line = lambda l: list(l)
 
         for i in range(0, len(self.chart_lines), 4):
             yield [split_line(self.chart_lines[i + j]) for j in range(4)]
-
-
-@dataclass(frozen=True)
-class UnfinishedLongNote:
-    time: BeatsTime
-    position: NotePosition
-    tail_tip: NotePosition
-
-    def ends_at(self, end: BeatsTime) -> LongNote:
-        if end < self.time:
-            raise ValueError(
-                f"Invalid end time ({end}) for long note starting at {self.time}"
-            )
-        return LongNote(
-            time=self.time,
-            position=self.position,
-            duration=end - self.time,
-            tail_tip=self.tail_tip,
-        )
-
-
-LONG_ARROW_RIGHT = {
-    ">",  # U+003E : GREATER-THAN SIGN
-    "＞",  # U+FF1E : FULLWIDTH GREATER-THAN SIGN
-}
-
-LONG_ARROW_LEFT = {
-    "<",  # U+003C : LESS-THAN SIGN
-    "＜",  # U+FF1C : FULLWIDTH LESS-THAN SIGN
-}
-
-LONG_ARROW_DOWN = {
-    "V",  # U+0056 : LATIN CAPITAL LETTER V
-    "v",  # U+0076 : LATIN SMALL LETTER V
-    "Ⅴ",  # U+2164 : ROMAN NUMERAL FIVE
-    "ⅴ",  # U+2174 : SMALL ROMAN NUMERAL FIVE
-    "∨",  # U+2228 : LOGICAL OR
-    "Ｖ",  # U+FF36 : FULLWIDTH LATIN CAPITAL LETTER V
-    "ｖ",  # U+FF56 : FULLWIDTH LATIN SMALL LETTER V
-}
-
-LONG_ARROW_UP = {
-    "^",  # U+005E : CIRCUMFLEX ACCENT
-    "∧",  # U+2227 : LOGICAL AND
-}
-
-LONG_ARROWS = LONG_ARROW_LEFT | LONG_ARROW_DOWN | LONG_ARROW_UP | LONG_ARROW_RIGHT
-
-LONG_DIRECTION = {
-    **{c: (1, 0) for c in LONG_ARROW_RIGHT},
-    **{c: (-1, 0) for c in LONG_ARROW_LEFT},
-    **{c: (0, 1) for c in LONG_ARROW_DOWN},
-    **{c: (0, -1) for c in LONG_ARROW_UP},
-}
-
-CIRCLE_FREE_TO_DECIMAL_TIME = {
-    c: Decimal("0.25") * i for i, c in enumerate(CIRCLE_FREE_SYMBOLS)
-}
-
-
-def _distance(a: NotePosition, b: NotePosition) -> float:
-    return abs(complex(*a.as_tuple()) - complex(*b.as_tuple()))
-
-
-def _long_note_solution_heuristic(
-    solution: Dict[NotePosition, NotePosition]
-) -> Tuple[int, int, int]:
-    c = Counter(int(_distance(k, v)) for k, v in solution.items())
-    return (c[3], c[2], c[1])
-
-
-def _is_simple_solution(solution, domains) -> bool:
-    return all(
-        solution[v] == min(domains[v], key=lambda e: _distance(e, v))
-        for v in solution.keys()
-    )
-
-
-def decimal_to_beats(current_beat: Decimal, symbol_timing: Decimal) -> BeatsTime:
-    decimal_time = current_beat + symbol_timing
-    return BeatsTime(decimal_time).limit_denominator(240)
 
 
 class MonoColumnParser(JubeatAnalyserParser):
@@ -230,7 +136,7 @@ class MonoColumnParser(JubeatAnalyserParser):
                 "jubeatools does not handle changing the bytes per panel value halfway"
             )
         else:
-            super().do_bpp(value)
+            self._do_bpp(value)
 
     def move_to_next_section(self):
         if len(self.current_chart_lines) % 4 != 0:
@@ -245,7 +151,7 @@ class MonoColumnParser(JubeatAnalyserParser):
                 )
             )
             self.current_chart_lines = []
-            self.current_beat += self.beats_per_section
+            self.section_starting_beat += self.beats_per_section
 
     def append_chart_line(self, line: str):
         if self.bytes_per_panel == 1 and len(line) != 4:
@@ -267,7 +173,7 @@ class MonoColumnParser(JubeatAnalyserParser):
             self.append_chart_line(chart_line)
         elif is_separator(line):
             self.move_to_next_section()
-        elif not is_empty_line(line):
+        elif not (is_empty_line(line) or self.is_short_line(line)):
             raise SyntaxError(f"not a valid mono-column file line : {line}")
 
     def notes(self) -> Iterator[Union[TapNote, LongNote]]:
@@ -279,15 +185,15 @@ class MonoColumnParser(JubeatAnalyserParser):
     def _iter_blocs(
         self,
     ) -> Iterator[Tuple[Decimal, MonoColumnLoadedSection, List[List[str]]]]:
-        current_beat = Decimal(0)
+        section_starting_beat = Decimal(0)
         for section in self.sections:
             for bloc in section.blocs():
-                yield current_beat, section, bloc
-            current_beat += section.length
+                yield section_starting_beat, section, bloc
+            section_starting_beat += section.length
 
     def _iter_notes(self) -> Iterator[Union[TapNote, LongNote]]:
         unfinished_longs: Dict[NotePosition, UnfinishedLongNote] = {}
-        for current_beat, section, bloc in self._iter_blocs():
+        for section_starting_beat, section, bloc in self._iter_blocs():
             should_skip: Set[NotePosition] = set()
 
             # 1/3 : look for ends to unfinished long notes
@@ -298,7 +204,7 @@ class MonoColumnParser(JubeatAnalyserParser):
                     if symbol in CIRCLE_FREE_SYMBOLS:
                         should_skip.add(pos)
                         symbol_time = CIRCLE_FREE_TO_DECIMAL_TIME[symbol]
-                        note_time = decimal_to_beats(current_beat, symbol_time)
+                        note_time = decimal_to_beats(section_starting_beat + symbol_time)
                         yield unfinished_long.ends_at(note_time)
                     elif symbol in section.symbols:
                         raise SyntaxError(
@@ -309,7 +215,7 @@ class MonoColumnParser(JubeatAnalyserParser):
                     if symbol in section.symbols:
                         should_skip.add(pos)
                         symbol_time = section.symbols[symbol]
-                        note_time = decimal_to_beats(current_beat, symbol_time)
+                        note_time = decimal_to_beats(section_starting_beat + symbol_time)
                         yield unfinished_long.ends_at(note_time)
 
             unfinished_longs = {
@@ -354,8 +260,8 @@ class MonoColumnParser(JubeatAnalyserParser):
                         "Invalid long note arrow pattern in bloc :\n"
                         + "\n".join("".join(line) for line in bloc)
                     )
-                solution = min(solutions, key=_long_note_solution_heuristic)
-                if len(solutions) > 1 and not _is_simple_solution(
+                solution = min(solutions, key=long_note_solution_heuristic)
+                if len(solutions) > 1 and not is_simple_solution(
                     solution, arrow_to_note_candidates
                 ):
                     warnings.warn(
@@ -369,7 +275,7 @@ class MonoColumnParser(JubeatAnalyserParser):
                     should_skip.add(note_pos)
                     symbol = bloc[note_pos.y][note_pos.x]
                     symbol_time = section.symbols[symbol]
-                    note_time = decimal_to_beats(current_beat, symbol_time)
+                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
                     unfinished_longs[note_pos] = UnfinishedLongNote(
                         time=note_time, position=note_pos, tail_tip=arrow_pos,
                     )
@@ -382,36 +288,33 @@ class MonoColumnParser(JubeatAnalyserParser):
                 symbol = bloc[y][x]
                 if symbol in section.symbols:
                     symbol_time = section.symbols[symbol]
-                    note_time = decimal_to_beats(current_beat, symbol_time)
+                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
                     yield TapNote(note_time, position)
 
     def _iter_notes_without_longs(self) -> Iterator[TapNote]:
-        current_beat = Decimal(0)
+        section_starting_beat = Decimal(0)
         for section in self.sections:
             for bloc, y, x in product(section.blocs(), range(4), range(4)):
                 symbol = bloc[y][x]
                 if symbol in section.symbols:
                     symbol_time = section.symbols[symbol]
-                    note_time = decimal_to_beats(current_beat, symbol_time)
+                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
                     position = NotePosition(x, y)
                     yield TapNote(note_time, position)
-            current_beat += section.length
+            section_starting_beat += section.length
 
 
 def load_mono_column(path: Path) -> Song:
     files = load_files(path)
-    charts = [
-        _load_mono_column_file(lines)
-        for _, lines in files.items()
-    ]
+    charts = [_load_mono_column_file(lines) for _, lines in files.items()]
     return reduce(lambda a, b: a.merge(b), charts)
-    
+
 
 def _load_mono_column_file(lines: List[str]) -> Song:
-    state = MonoColumnParser()
+    parser = MonoColumnParser()
     for i, raw_line in enumerate(lines):
         try:
-            state.load_line(raw_line)
+            parser.load_line(raw_line)
         except Exception as e:
             raise SyntaxError(
                 f"Error while parsing mono column line {i} :\n"
@@ -419,20 +322,23 @@ def _load_mono_column_file(lines: List[str]) -> Song:
             ) from None
 
     metadata = Metadata(
-        title=state.title, artist=state.artist, audio=state.music, cover=state.jacket
+        title=parser.title,
+        artist=parser.artist,
+        audio=parser.music,
+        cover=parser.jacket,
     )
-    if state.preview_start is not None:
-        metadata.preview_start = SecondsTime(state.preview_start) / 1000
+    if parser.preview_start is not None:
+        metadata.preview_start = SecondsTime(parser.preview_start) / 1000
         metadata.preview_length = SecondsTime(10)
 
     timing = Timing(
-        events=state.timing_events, beat_zero_offset=SecondsTime(state.offset) / 1000
+        events=parser.timing_events, beat_zero_offset=SecondsTime(parser.offset) / 1000
     )
     charts = {
-        state.difficulty: Chart(
-            level=state.level,
+        parser.difficulty: Chart(
+            level=parser.level,
             timing=timing,
-            notes=sorted(state.notes(), key=lambda n: (n.time, n.position)),
+            notes=sorted(parser.notes(), key=lambda n: (n.time, n.position)),
         )
     }
     return Song(metadata=metadata, charts=charts)

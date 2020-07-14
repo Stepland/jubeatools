@@ -1,5 +1,7 @@
-from path import Path
 from typing import Dict, List
+
+from path import Path
+
 
 def load_files(path: Path) -> Dict[Path, List[str]]:
     # The vast majority of memo files you will encounter will be propely
@@ -13,8 +15,9 @@ def load_files(path: Path) -> Dict[Path, List[str]]:
         _load_file(path, files)
     return files
 
+
 def _load_file(path: Path, files: Dict[Path, List[str]]):
     try:
-        files[path] = path.lines('shift_jis_2004')
+        files[path] = path.lines("shift_jis_2004")
     except UnicodeDecodeError:
         pass

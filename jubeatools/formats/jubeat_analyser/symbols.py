@@ -1,4 +1,4 @@
-"""Usual symbols for memo files"""
+"""Common symbols for jubeat analyser files"""
 
 NOTE_SYMBOLS = [
     "①",
@@ -75,3 +75,28 @@ CIRCLE_FREE_SYMBOLS = [
     "19",  #  ⎪
     "20",  #  ⎭
 ]
+
+LONG_ARROW_RIGHT = {
+    ">",  # U+003E : GREATER-THAN SIGN
+    "＞",  # U+FF1E : FULLWIDTH GREATER-THAN SIGN
+}
+
+LONG_ARROW_LEFT = {
+    "<",  # U+003C : LESS-THAN SIGN
+    "＜",  # U+FF1C : FULLWIDTH LESS-THAN SIGN
+}
+
+LONG_ARROW_DOWN = {
+    "V",  # U+0056 : LATIN CAPITAL LETTER V
+    "v",  # U+0076 : LATIN SMALL LETTER V
+    "Ⅴ",  # U+2164 : ROMAN NUMERAL FIVE
+    "ⅴ",  # U+2174 : SMALL ROMAN NUMERAL FIVE
+    "∨",  # U+2228 : LOGICAL OR
+    "Ｖ",  # U+FF36 : FULLWIDTH LATIN CAPITAL LETTER V
+    "ｖ",  # U+FF56 : FULLWIDTH LATIN SMALL LETTER V
+}
+
+LONG_ARROW_UP = {
+    "^",  # U+005E : CIRCUMFLEX ACCENT
+    "∧",  # U+2227 : LOGICAL AND
+}

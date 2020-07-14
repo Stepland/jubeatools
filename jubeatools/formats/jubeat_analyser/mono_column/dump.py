@@ -5,12 +5,14 @@ from decimal import Decimal
 from fractions import Fraction
 from io import StringIO
 from itertools import chain
-from typing import IO, Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
+from path import Path
 from sortedcontainers import SortedDict, SortedKeyList, SortedSet
 
 from jubeatools import __version__
+from jubeatools.formats.filetypes import ChartFile, JubeatFile
 from jubeatools.song import (
     BeatsTime,
     Chart,
@@ -86,7 +88,7 @@ class MonoColumnDumpedSection:
     symbols: Dict[BeatsTime, str] = field(default_factory=dict)
     notes: List[TapNote] = field(default_factory=list)
 
-    def render(self, circle_free: bool = False,) -> str:
+    def render(self, circle_free: bool = False) -> str:
         blocs = []
         commands = list(self._dump_commands())
         if commands:
@@ -135,7 +137,6 @@ class MonoColumnDumpedSection:
                         frame[pos] = arrow
                     else:
                         frame[pos] = line
-
             elif isinstance(note, TapNote):
                 if note.position in frame:
                     frames.append(frame)
@@ -143,7 +144,6 @@ class MonoColumnDumpedSection:
                 time_in_section = note.time - self.current_beat
                 symbol = self.symbols[time_in_section]
                 frame[note.position] = symbol
-
             elif isinstance(note, LongNoteEnd):
                 if note.position in frame:
                     frames.append(frame)
@@ -219,16 +219,22 @@ def _raise_if_unfit_for_mono_column(
 
 
 def _dump_mono_column_chart(
-    difficulty: str, chart: Chart, metadata: Metadata, timing: Timing
+    difficulty: str,
+    chart: Chart,
+    metadata: Metadata,
+    timing: Timing,
+    circle_free: bool = False,
 ) -> StringIO:
 
-    _raise_if_unfit_for_mono_column(chart, timing)
+    _raise_if_unfit_for_mono_column(chart, timing, circle_free)
 
     timing_events = sorted(timing.events, key=lambda e: e.time)
     notes = SortedKeyList(set(chart.notes), key=lambda n: n.time)
+
     for note in chart.notes:
         if isinstance(note, LongNote):
             notes.add(LongNoteEnd(note.time + note.duration, note.position))
+
     all_events = SortedKeyList(timing_events + notes, key=lambda n: n.time)
     last_event = all_events[-1]
     last_measure = last_event.time // 4
@@ -236,6 +242,7 @@ def _dump_mono_column_chart(
     for i in range(last_measure + 1):
         beat = BeatsTime(4) * i
         sections.add_section(beat)
+
     header = sections[0].commands
     header["o"] = int(timing.beat_zero_offset * 1000)
     header["lev"] = int(chart.level)
@@ -264,6 +271,7 @@ def _dump_mono_column_chart(
             sections[key].commands["b"] = 4
         else:
             sections[key].commands["b"] = fraction_to_decimal(next_key - key)
+
     # Then, trim all the redundant b=…
     last_b = 4
     for section in sections.values():
@@ -272,11 +280,13 @@ def _dump_mono_column_chart(
             del section.commands["b"]
         else:
             last_b = current_b
+
     # Fill sections with notes
     for key, next_key in windowed(chain(sections.keys(), [None]), 2):
         sections[key].notes = list(
             notes.irange_key(min_key=key, max_key=next_key, inclusive=(True, False))
         )
+
     # Define extra symbols
     existing_symbols = deepcopy(BEATS_TIME_TO_SYMBOL)
     extra_symbols = iter(DEFAULT_EXTRA_SYMBOLS)
@@ -296,16 +306,30 @@ def _dump_mono_column_chart(
     file.write(f"// Converted using jubeatools {__version__}\n")
     file.write(f"// https://github.com/Stepland/jubeatools\n\n")
     for section_start, section in sections.items():
-        file.write(section.render() + "\n")
+        file.write(section.render(circle_free) + "\n")
 
     return file
 
 
-def dump_mono_column(song: Song) -> Dict[str, IO]:
-    files = {}
-    for difname, chart in song.charts.items():
-        filename = f"{song.metadata.title} [{difname}].txt"
-        files[filename] = _dump_mono_column_chart(
-            difname, chart, song.metadata, chart.timing or song.global_timing,
+def _dump_mono_column_internal(
+    song: Song, circle_free: bool = False
+) -> List[JubeatFile]:
+    files = []
+    for difficulty, chart in song.charts.items():
+        contents = _dump_mono_column_chart(
+            difficulty,
+            chart,
+            song.metadata,
+            chart.timing or song.global_timing,
+            circle_free,
         )
+        files.append(ChartFile(contents, song, difficulty, chart))
+
     return files
+
+
+def dump_mono_column(
+    song: Song, circle_free: bool, folder: Path, name_pattern: str = None
+):
+    if not folder.isdir():
+        raise ValueError(f"{folder} is not a directory")

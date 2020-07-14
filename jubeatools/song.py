@@ -185,4 +185,3 @@ class Song:
             raise ValueError("Can't merge songs with differing global timings")
         global_timing = self.global_timing or other.global_timing
         return Song(self.metadata, charts, global_timing)
-

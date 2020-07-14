@@ -35,7 +35,6 @@ LOADERS: Dict[Format, Callable[[Path], Song]] = {
     Format.MONO_COLUMN: load_mono_column,
 }
 
-# Dumpers serialize a Song object into a (filename -> file) mapping
 DUMPERS: Dict[str, Callable[[Song], Dict[str, IO]]] = {
     Format.MEMON_LEGACY: dump_memon_legacy,
     Format.MEMON_0_1_0: dump_memon_0_1_0,
