@@ -204,7 +204,9 @@ class MonoColumnParser(JubeatAnalyserParser):
                     if symbol in CIRCLE_FREE_SYMBOLS:
                         should_skip.add(pos)
                         symbol_time = CIRCLE_FREE_TO_DECIMAL_TIME[symbol]
-                        note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                        note_time = decimal_to_beats(
+                            section_starting_beat + symbol_time
+                        )
                         yield unfinished_long.ends_at(note_time)
                     elif symbol in section.symbols:
                         raise SyntaxError(
@@ -215,7 +217,9 @@ class MonoColumnParser(JubeatAnalyserParser):
                     if symbol in section.symbols:
                         should_skip.add(pos)
                         symbol_time = section.symbols[symbol]
-                        note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                        note_time = decimal_to_beats(
+                            section_starting_beat + symbol_time
+                        )
                         yield unfinished_long.ends_at(note_time)
 
             unfinished_longs = {

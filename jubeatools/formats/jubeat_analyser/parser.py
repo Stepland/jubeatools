@@ -25,6 +25,8 @@ CIRCLE_FREE_TO_DECIMAL_TIME = {
     c: Decimal("0.25") * i for i, c in enumerate(CIRCLE_FREE_SYMBOLS)
 }
 
+CIRCLE_FREE_TO_NOTE_SYMBOL = dict(zip(CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS))
+
 LONG_ARROWS = LONG_ARROW_LEFT | LONG_ARROW_DOWN | LONG_ARROW_UP | LONG_ARROW_RIGHT
 
 LONG_DIRECTION = {
@@ -136,7 +138,9 @@ class JubeatAnalyserParser:
 
     def do_t(self, value):
         self.current_tempo = Decimal(value)
-        self.timing_events.append(BPMEvent(self.section_starting_beat, BPM=self.current_tempo))
+        self.timing_events.append(
+            BPMEvent(self.section_starting_beat, BPM=self.current_tempo)
+        )
 
     def do_o(self, value):
         self.offset = int(value)
