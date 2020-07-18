@@ -94,7 +94,7 @@ def bad_notes(draw, longs: bool):
     note_strat = tap_note()
     if longs:
         note_strat = st.one_of(note_strat, long_note())
-    return draw(st.sets(note_strat, max_size=50))
+    return draw(st.sets(note_strat, max_size=32))
 
 
 @st.composite
@@ -105,7 +105,7 @@ def notes(draw, options: NoteOption):
     note_strat = tap_note()
     if NoteOption.LONGS in options:
         note_strat = st.one_of(note_strat, long_note())
-    raw_notes = draw(st.sets(note_strat, max_size=50))
+    raw_notes = draw(st.sets(note_strat, max_size=32))
 
     if NoteOption.COLLISIONS in options:
         return raw_notes

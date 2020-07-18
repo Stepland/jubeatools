@@ -167,7 +167,7 @@ class Song:
     charts: Mapping[str, Chart] = field(default_factory=MultiDict)
     global_timing: Optional[Timing] = None
 
-    def merge(self, other: Song) -> Song:
+    def merge(self, other: "Song") -> "Song":
         if self.metadata != other.metadata:
             raise ValueError(
                 "Merge conflit in song metadata :\n"

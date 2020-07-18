@@ -29,7 +29,7 @@ from jubeatools.song import (
 
 from ..command import is_command, parse_command
 from ..files import load_files
-from ..parser import (
+from ..load_tools import (
     CIRCLE_FREE_TO_DECIMAL_TIME,
     LONG_ARROWS,
     LONG_DIRECTION,

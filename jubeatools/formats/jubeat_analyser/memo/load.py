@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from decimal import Decimal
 from functools import reduce
 from itertools import chain, product, zip_longest
-from typing import Mapping, Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Dict, Iterator, List, Mapping, Optional, Set, Tuple, Union
 
 import constraint
-from more_itertools import mark_ends
+from more_itertools import mark_ends, collapse
 from parsimonious import Grammar, NodeVisitor, ParseError
 from path import Path
 
@@ -25,7 +25,7 @@ from jubeatools.song import (
 
 from ..command import is_command, parse_command
 from ..files import load_files
-from ..parser import (
+from ..load_tools import (
     CIRCLE_FREE_TO_DECIMAL_TIME,
     CIRCLE_FREE_TO_NOTE_SYMBOL,
     LONG_ARROWS,
@@ -44,8 +44,9 @@ from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 memo_chart_line_grammar = Grammar(
     r"""
     line            = ws position_part ws (timing_part ws)? comment?
-    position_part   = ~r"[^*#:|/\s]{4,8}"
-    timing_part     = "|" ~r"[^*#:|/\s]+" "|"
+    position_part   = ~r"[^*#:|｜/\s]{4,8}"
+    timing_part     = bar ~r"[^*#:|｜/\s]+" bar
+    bar             = "|" / "｜"
     ws              = ~r"[\t ]*"
     comment         = ~r"//.*"
 """
@@ -141,16 +142,16 @@ class MemoLoadedSection:
 #  - encodable in shift_jis_2004
 # Gets added to the list of characters to be ignored in the timing section
 EMPTY_BEAT_SYMBOLS = {
-    "一",  # U+04E00 - CJK UNIFIED IDEOGRAPH-4E00
-    "－",  # U+0FF0D - FULLWIDTH HYPHEN-MINUS
-    "ー",  # U+030FC - KATAKANA-HIRAGANA PROLONGED SOUND MARK
-    "─",  # U+02500 - BOX DRAWINGS LIGHT HORIZONTAL
-    "―",  # U+02015 - HORIZONTAL BAR
-    "━",  # U+02501 - BOX DRAWINGS HEAVY HORIZONTAL
-    "–",  # U+02013 - EN DASH
-    "‐",  # U+02010 - HYPHEN
-    "-",  # U+0002D - HYPHEN-MINUS
-    "−",  # U+02212 - MINUS SIGN
+    "一",  # U+4E00 - CJK UNIFIED IDEOGRAPH-4E00
+    "－",  # U+FF0D - FULLWIDTH HYPHEN-MINUS
+    "ー",  # U+30FC - KATAKANA-HIRAGANA PROLONGED SOUND MARK
+    "─",  # U+2500 - BOX DRAWINGS LIGHT HORIZONTAL
+    "―",  # U+2015 - HORIZONTAL BAR
+    "━",  # U+2501 - BOX DRAWINGS HEAVY HORIZONTAL
+    "–",  # U+2013 - EN DASH
+    "‐",  # U+2010 - HYPHEN
+    "-",  # U+002D - HYPHEN-MINUS
+    "−",  # U+2212 - MINUS SIGN
 }
 
 
@@ -216,6 +217,7 @@ class MemoParser(JubeatAnalyserParser):
                 self._push_section()
 
         self.frames.append(frame)
+        self.current_chart_lines = []
 
     def _push_section(self):
         self.sections.append(
@@ -227,7 +229,6 @@ class MemoParser(JubeatAnalyserParser):
             )
         )
         self.frames = []
-        self.current_chart_lines = []
         self.section_starting_beat += self.beats_per_section
 
     def finish_last_few_notes(self):
@@ -277,7 +278,7 @@ class MemoParser(JubeatAnalyserParser):
                 if frame.timing_part:
                     local_symbols = {
                         symbol: Decimal("0.25") * i
-                        for i, symbol in enumerate(chain(frame.timing_part))
+                        for i, symbol in enumerate(collapse(frame.timing_part))
                         if symbol not in EMPTY_BEAT_SYMBOLS
                     }
                 currently_defined_symbols = ChainMap(local_symbols, section.symbols)

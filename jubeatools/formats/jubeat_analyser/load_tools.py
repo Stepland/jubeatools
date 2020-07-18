@@ -1,4 +1,4 @@
-"""Collection of tools that are common to all the jubeat analyser formats"""
+"""Collection of parsing tools that are common to all the jubeat analyser formats"""
 import re
 from collections import Counter
 from copy import deepcopy
