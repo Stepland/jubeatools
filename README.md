@@ -14,5 +14,6 @@ jubeatools can handle conversions in the following way :
 ### Jubeat Analyser
 |                      | input | output |
 |----------------------|:-----:|:------:|
+| #memo1               | ✔️     | ✔️      |
 | #memo                | ✔️     | ✔️      |
 | mono-column (1列形式) | ✔️     | ✔️      |

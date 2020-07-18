@@ -84,7 +84,7 @@ class Memo1Parser(JubeatAnalyserParser):
 
     def do_memo1(self):
         ...
-    
+
     do_boogie = do_memo2 = do_memo
 
     def do_bpp(self, value):
@@ -179,7 +179,9 @@ class Memo1Parser(JubeatAnalyserParser):
 
     def _iter_frames(
         self,
-    ) -> Iterator[Tuple[Mapping[str, BeatsTime], Memo1Frame, Decimal, Memo1LoadedSection]]:
+    ) -> Iterator[
+        Tuple[Mapping[str, BeatsTime], Memo1Frame, Decimal, Memo1LoadedSection]
+    ]:
         """iterate over tuples of
         currently_defined_symbols, frame, section_starting_beat, section"""
         local_symbols: Dict[str, Decimal] = {}
@@ -190,7 +192,9 @@ class Memo1Parser(JubeatAnalyserParser):
                 if frame.timing_part:
                     frame_starting_beat = sum(f.duration for f in section.frames[:i])
                     local_symbols = {
-                        symbol: BeatsTime(symbol_index, len(bar)) + bar_index + decimal_to_beats(frame_starting_beat)
+                        symbol: BeatsTime(symbol_index, len(bar))
+                        + bar_index
+                        + decimal_to_beats(frame_starting_beat)
                         for bar_index, bar in enumerate(frame.timing_part)
                         for symbol_index, symbol in enumerate(bar)
                         if symbol not in EMPTY_BEAT_SYMBOLS
@@ -243,8 +247,7 @@ class Memo1Parser(JubeatAnalyserParser):
             )
             if arrow_to_note_candidates:
                 solution = pick_correct_long_note_candidates(
-                    arrow_to_note_candidates,
-                    frame.position_part,
+                    arrow_to_note_candidates, frame.position_part,
                 )
                 for arrow_pos, note_pos in solution.items():
                     should_skip.add(arrow_pos)
@@ -252,7 +255,9 @@ class Memo1Parser(JubeatAnalyserParser):
                     symbol = frame.position_part[note_pos.y][note_pos.x]
                     symbol_time = currently_defined_symbols[symbol]
                     note_time = decimal_to_beats(section_starting_beat) + symbol_time
-                    unfinished_longs[note_pos] = UnfinishedLongNote(time=note_time, position=note_pos, tail_tip=arrow_pos)
+                    unfinished_longs[note_pos] = UnfinishedLongNote(
+                        time=note_time, position=note_pos, tail_tip=arrow_pos
+                    )
 
             # 3/3 : find regular notes
             for y, x in product(range(4), range(4)):

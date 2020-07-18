@@ -14,7 +14,6 @@ from path import Path
 from sortedcontainers import SortedKeyList
 
 from jubeatools import __version__
-from jubeatools.utils import lcm
 from jubeatools.formats.filetypes import ChartFile, JubeatFile
 from jubeatools.song import (
     BeatsTime,
@@ -26,6 +25,7 @@ from jubeatools.song import (
     TapNote,
     Timing,
 )
+from jubeatools.utils import lcm
 
 from ..command import dump_command
 from ..dump_tools import (
@@ -48,6 +48,7 @@ AnyNote = Union[TapNote, LongNote, LongNoteEnd]
 
 EMPTY_BEAT_SYMBOL = "－"  # U+0FF0D : FULLWIDTH HYPHEN-MINUS
 EMPTY_POSITION_SYMBOL = "□"  # U+025A1 : WHITE SQUARE
+
 
 @dataclass
 class Frame:
@@ -101,7 +102,7 @@ class Memo1DumpedSection(JubeatAnalyserDumpedSection):
             time_in_section = note.time - self.current_beat
             bar_index = int(time_in_section)
             notes_by_bar[bar_index].append(note)
-        
+
         # Pre-render timing bars
         bars: Dict[int, List[str]] = defaultdict(dict)
         chosen_symbols: Dict[BeatsTime, str] = {}
@@ -115,14 +116,15 @@ class Memo1DumpedSection(JubeatAnalyserDumpedSection):
             for note in notes:
                 time_in_section = note.time - self.current_beat
                 time_in_bar = time_in_section % Fraction(1)
-                time_index = time_in_bar.numerator * (bar_length / time_in_bar.denominator)
+                time_index = time_in_bar.numerator * (
+                    bar_length / time_in_bar.denominator
+                )
                 if time_index not in bar_dict:
                     symbol = next(symbols_iterator)
                     chosen_symbols[time_in_section] = symbol
                     bar_dict[time_index] = symbol
             bar = [bar_dict.get(i, EMPTY_BEAT_SYMBOL) for i in range(bar_length)]
             bars[bar_index] = bar
-
 
         # Create frame by bar
         frames_by_bar: Dict[int, List[Frame]] = defaultdict(list)
