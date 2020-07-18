@@ -13,6 +13,7 @@ from parsimonious import Grammar, NodeVisitor, ParseError
 from path import Path
 
 from jubeatools.song import (
+    BeatsTime,
     Chart,
     LongNote,
     Metadata,
@@ -49,19 +50,15 @@ from ..symbol_definition import is_symbol_definition, parse_symbol_definition
 from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 
-class MemoFrame(DoubleColumnFrame):
+class Memo1Frame(DoubleColumnFrame):
     @property
     def duration(self) -> Decimal:
-        res = 0
-        for t in self.timing_part:
-            res += len(t)
-        return Decimal("0.25") * res
+        return Decimal(len(self.timing_part))
 
 
 @dataclass
-class MemoLoadedSection:
-    frames: List[MemoFrame]
-    symbols: Dict[str, Decimal]
+class Memo1LoadedSection:
+    frames: List[Memo1Frame]
     length: Decimal
     tempo: Decimal
 
@@ -69,8 +66,6 @@ class MemoLoadedSection:
         res = []
         if self.length != 4:
             res += [f"b={self.length}", ""]
-        for symbol, time in self.symbols:
-            res += [f"*{symbol}:{time}", ""]
         for _, is_last, frame in mark_ends(self.frames):
             res += [str(frame)]
             if not is_last:
@@ -78,20 +73,19 @@ class MemoLoadedSection:
         return "\n".join(res)
 
 
-class MemoParser(JubeatAnalyserParser):
+class Memo1Parser(JubeatAnalyserParser):
     def __init__(self):
         super().__init__()
-        self.symbols: Dict[str, Decimal] = {}
-        self.frames: List[MemoFrame] = []
-        self.sections: List[MemoLoadedSection] = []
+        self.frames: List[Memo1Frame] = []
+        self.sections: List[Memo1LoadedSection] = []
 
     def do_memo(self):
-        ...
-
-    def do_memo1(self):
         raise ValueError("This is not a memo file")
 
-    do_boogie = do_memo2 = do_memo1
+    def do_memo1(self):
+        ...
+    
+    do_boogie = do_memo2 = do_memo
 
     def do_bpp(self, value):
         if self.sections or self.frames:
@@ -130,7 +124,7 @@ class MemoParser(JubeatAnalyserParser):
             for memo_line in self.current_chart_lines
             if memo_line.timing is not None
         ]
-        frame = MemoFrame(position_part, timing_part)
+        frame = Memo1Frame(position_part, timing_part)
         # if the current frame has some timing info
         if frame.duration > 0:
             # and the previous frames already cover enough beats
@@ -143,9 +137,8 @@ class MemoParser(JubeatAnalyserParser):
 
     def _push_section(self):
         self.sections.append(
-            MemoLoadedSection(
+            Memo1LoadedSection(
                 frames=deepcopy(self.frames),
-                symbols=deepcopy(self.symbols),
                 length=self.beats_per_section,
                 tempo=self.current_tempo,
             )
@@ -170,9 +163,6 @@ class MemoParser(JubeatAnalyserParser):
         if is_command(line):
             command, value = parse_command(line)
             self.handle_command(command, value)
-        elif is_symbol_definition(line):
-            symbol, timing = parse_symbol_definition(line)
-            self.define_symbol(symbol, timing)
         elif is_empty_line(line) or self.is_short_line(line):
             return
         elif is_double_column_chart_line(line):
@@ -189,9 +179,9 @@ class MemoParser(JubeatAnalyserParser):
 
     def _iter_frames(
         self,
-    ) -> Iterator[Tuple[Mapping[str, Decimal], MemoFrame, Decimal, MemoLoadedSection]]:
+    ) -> Iterator[Tuple[Mapping[str, BeatsTime], Memo1Frame, Decimal, Memo1LoadedSection]]:
         """iterate over tuples of
-        currently_defined_symbols, frame_starting_beat, frame, section_starting_beat, section"""
+        currently_defined_symbols, frame, section_starting_beat, section"""
         local_symbols: Dict[str, Decimal] = {}
         section_starting_beat = Decimal(0)
         for section in self.sections:
@@ -200,12 +190,12 @@ class MemoParser(JubeatAnalyserParser):
                 if frame.timing_part:
                     frame_starting_beat = sum(f.duration for f in section.frames[:i])
                     local_symbols = {
-                        symbol: Decimal("0.25") * i + frame_starting_beat
-                        for i, symbol in enumerate(collapse(frame.timing_part))
+                        symbol: BeatsTime(symbol_index, len(bar)) + bar_index + decimal_to_beats(frame_starting_beat)
+                        for bar_index, bar in enumerate(frame.timing_part)
+                        for symbol_index, symbol in enumerate(bar)
                         if symbol not in EMPTY_BEAT_SYMBOLS
                     }
-                currently_defined_symbols = ChainMap(local_symbols, section.symbols)
-                yield currently_defined_symbols, frame, section_starting_beat, section
+                yield local_symbols, frame, section_starting_beat, section
             section_starting_beat += section.length
 
     def _iter_notes(self) -> Iterator[Union[TapNote, LongNote]]:
@@ -240,7 +230,7 @@ class MemoParser(JubeatAnalyserParser):
                         continue
 
                 should_skip.add(pos)
-                note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                note_time = decimal_to_beats(section_starting_beat) + symbol_time
                 yield unfinished_long.ends_at(note_time)
 
             unfinished_longs = {
@@ -261,7 +251,7 @@ class MemoParser(JubeatAnalyserParser):
                     should_skip.add(note_pos)
                     symbol = frame.position_part[note_pos.y][note_pos.x]
                     symbol_time = currently_defined_symbols[symbol]
-                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                    note_time = decimal_to_beats(section_starting_beat) + symbol_time
                     unfinished_longs[note_pos] = UnfinishedLongNote(time=note_time, position=note_pos, tail_tip=arrow_pos)
 
             # 3/3 : find regular notes
@@ -274,7 +264,7 @@ class MemoParser(JubeatAnalyserParser):
                     symbol_time = currently_defined_symbols[symbol]
                 except KeyError:
                     continue
-                note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                note_time = decimal_to_beats(section_starting_beat) + symbol_time
                 yield TapNote(note_time, position)
 
     def _iter_notes_without_longs(self) -> Iterator[TapNote]:
@@ -291,13 +281,13 @@ class MemoParser(JubeatAnalyserParser):
                     symbol_time = currently_defined_symbols[symbol]
                 except KeyError:
                     continue
-                note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                note_time = decimal_to_beats(section_starting_beat) + symbol_time
                 position = NotePosition(x, y)
                 yield TapNote(note_time, position)
 
 
-def _load_memo_file(lines: List[str]) -> Song:
-    parser = MemoParser()
+def _load_memo1_file(lines: List[str]) -> Song:
+    parser = Memo1Parser()
     for i, raw_line in enumerate(lines):
         try:
             parser.load_line(raw_line)
@@ -330,7 +320,7 @@ def _load_memo_file(lines: List[str]) -> Song:
     return Song(metadata=metadata, charts=charts)
 
 
-def load_memo(path: Path) -> Song:
+def load_memo1(path: Path) -> Song:
     files = load_files(path)
     charts = [_load_memo_file(lines) for _, lines in files.items()]
     return reduce(Song.merge, charts)

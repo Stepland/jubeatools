@@ -233,18 +233,17 @@ class MonoColumnParser(JubeatAnalyserParser):
                 bloc, section.symbols.keys(), should_skip
             )
             if arrow_to_note_candidates:
-                unfinished_longs.update(
-                    {
-                        note.position: note
-                        for note in pick_correct_long_note_candidates(
-                            arrow_to_note_candidates,
-                            bloc,
-                            should_skip,
-                            section.symbols,
-                            section_starting_beat,
-                        )
-                    }
+                solution = pick_correct_long_note_candidates(
+                    arrow_to_note_candidates,
+                    bloc,
                 )
+                for arrow_pos, note_pos in solution.items():
+                    should_skip.add(arrow_pos)
+                    should_skip.add(note_pos)
+                    symbol = bloc[note_pos.y][note_pos.x]
+                    symbol_time = section.symbols[symbol]
+                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                    unfinished_longs[note_pos] = UnfinishedLongNote(time=note_time, position=note_pos, tail_tip=arrow_pos)
 
             # 3/3 : find regular notes
             for y, x in product(range(4), range(4)):

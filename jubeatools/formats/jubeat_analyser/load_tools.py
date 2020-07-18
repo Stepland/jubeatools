@@ -5,10 +5,11 @@ from collections import Counter
 from copy import deepcopy
 from dataclasses import dataclass
 from decimal import Decimal
-from itertools import product
-from typing import Dict, Iterator, List, Set, Tuple
+from itertools import product, zip_longest
+from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 import constraint
+from parsimonious import Grammar, NodeVisitor, ParseError
 
 from jubeatools.song import BeatsTime, BPMEvent, LongNote, NotePosition
 
@@ -44,8 +45,81 @@ LONG_DIRECTION = {
 EMPTY_LINE = re.compile(r"\s*(//.*)?")
 
 
+# Any unicode character that's both :
+#  - confusable with a dash/hyphen
+#  - encodable in shift_jis_2004
+# Gets added to the list of characters to be ignored in the timing section
+EMPTY_BEAT_SYMBOLS = {
+    "一",  # U+4E00 - CJK UNIFIED IDEOGRAPH-4E00
+    "－",  # U+FF0D - FULLWIDTH HYPHEN-MINUS
+    "ー",  # U+30FC - KATAKANA-HIRAGANA PROLONGED SOUND MARK
+    "─",  # U+2500 - BOX DRAWINGS LIGHT HORIZONTAL
+    "―",  # U+2015 - HORIZONTAL BAR
+    "━",  # U+2501 - BOX DRAWINGS HEAVY HORIZONTAL
+    "–",  # U+2013 - EN DASH
+    "‐",  # U+2010 - HYPHEN
+    "-",  # U+002D - HYPHEN-MINUS
+    "−",  # U+2212 - MINUS SIGN
+}
+
+
+double_column_chart_line_grammar = Grammar(
+    r"""
+    line            = ws position_part ws (timing_part ws)? comment?
+    position_part   = ~r"[^*#:|/\s]{4,8}"
+    timing_part     = "|" ~r"[^*#:|/\s]*" "|"
+    ws              = ~r"[\t ]*"
+    comment         = ~r"//.*"
+"""
+)
+
+
+@dataclass
+class DoubleColumnChartLine:
+    position: str
+    timing: Optional[str]
+
+    def __str__(self):
+        return f"{self.position} |{self.timing}|"
+
+
+class DoubleColumnChartLineVisitor(NodeVisitor):
+    def __init__(self):
+        super().__init__()
+        self.pos_part = None
+        self.time_part = None
+
+    def visit_line(self, node, visited_children):
+        return DoubleColumnChartLine(self.pos_part, self.time_part)
+
+    def visit_position_part(self, node, visited_children):
+        self.pos_part = node.text
+
+    def visit_timing_part(self, node, visited_children):
+        _, time_part, _ = node.children
+        self.time_part = time_part.text
+
+    def generic_visit(self, node, visited_children):
+        ...
+
+
+def is_double_column_chart_line(line: str) -> bool:
+    try:
+        double_column_chart_line_grammar.parse(line)
+    except ParseError:
+        return False
+    else:
+        return True
+
+
+def parse_double_column_chart_line(line: str) -> DoubleColumnChartLine:
+    return DoubleColumnChartLineVisitor().visit(
+        double_column_chart_line_grammar.parse(line)
+    )
+
+
 def is_empty_line(line: str) -> bool:
-    return bool(EMPTY_LINE.match(line))
+    return bool(EMPTY_LINE.fullmatch(line))
 
 
 def split_double_byte_line(line: str) -> List[str]:
@@ -123,12 +197,11 @@ def find_long_note_candidates(
 def pick_correct_long_note_candidates(
     arrow_to_note_candidates: Dict[NotePosition, Set[NotePosition]],
     bloc: List[List[str]],
-    should_skip: Set[NotePosition],
-    currently_defined_symbols: Dict[str, Decimal],
-    section_starting_beat: Decimal,
-) -> Iterator[UnfinishedLongNote]:
+) -> Dict[NotePosition, NotePosition]:
     """Believe it or not, assigning each arrow to a valid note candidate
-    involves whipping out a CSP solver"""
+    involves whipping out a CSP solver.
+    Returns an arrow_pos -> note_pos mapping
+    """
     problem = constraint.Problem()
     for arrow_pos, note_candidates in arrow_to_note_candidates.items():
         problem.addVariable(arrow_pos, list(note_candidates))
@@ -149,13 +222,7 @@ def pick_correct_long_note_candidates(
             + "\n"
             "The resulting long notes might not be what you expect"
         )
-    for arrow_pos, note_pos in solution.items():
-        should_skip.add(arrow_pos)
-        should_skip.add(note_pos)
-        symbol = bloc[note_pos.y][note_pos.x]
-        symbol_time = currently_defined_symbols[symbol]
-        note_time = decimal_to_beats(section_starting_beat + symbol_time)
-        yield UnfinishedLongNote(time=note_time, position=note_pos, tail_tip=arrow_pos)
+    return solution
 
 
 def note_distance(a: NotePosition, b: NotePosition) -> float:
@@ -292,3 +359,18 @@ class JubeatAnalyserParser:
 
     def is_short_line(self, line: str) -> bool:
         return len(line.encode("shift_jis_2004")) < self.bytes_per_panel * 4
+
+
+@dataclass
+class DoubleColumnFrame:
+    position_part: List[List[str]]
+    timing_part: List[List[str]]
+
+    def __str__(self):
+        res = []
+        for pos, time in zip_longest(self.position_part, self.timing_part):
+            line = [f"{''.join(pos)}"]
+            if time is not None:
+                line += [f"|{''.join(time)}|"]
+            res += [" ".join(line)]
+        return "\n".join(res)
