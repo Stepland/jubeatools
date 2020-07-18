@@ -1,10 +1,14 @@
 """Collection of parsing tools that are common to all the jubeat analyser formats"""
 import re
+import warnings
 from collections import Counter
 from copy import deepcopy
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Dict, List, Tuple
+from itertools import product
+from typing import Dict, Iterator, List, Set, Tuple
+
+import constraint
 
 from jubeatools.song import BeatsTime, BPMEvent, LongNote, NotePosition
 
@@ -65,24 +69,6 @@ def decimal_to_beats(decimal_time: Decimal) -> BeatsTime:
     return BeatsTime(decimal_time).limit_denominator(240)
 
 
-def note_distance(a: NotePosition, b: NotePosition) -> float:
-    return abs(complex(*a.as_tuple()) - complex(*b.as_tuple()))
-
-
-def long_note_solution_heuristic(
-    solution: Dict[NotePosition, NotePosition]
-) -> Tuple[int, int, int]:
-    c = Counter(int(note_distance(k, v)) for k, v in solution.items())
-    return (c[3], c[2], c[1])
-
-
-def is_simple_solution(solution, domains) -> bool:
-    return all(
-        solution[v] == min(domains[v], key=lambda e: note_distance(e, v))
-        for v in solution.keys()
-    )
-
-
 @dataclass(frozen=True)
 class UnfinishedLongNote:
     time: BeatsTime
@@ -100,6 +86,94 @@ class UnfinishedLongNote:
             duration=end - self.time,
             tail_tip=self.tail_tip,
         )
+
+
+def find_long_note_candidates(
+    bloc: List[List[str]], note_symbols: Set[str], should_skip: Set[NotePosition]
+) -> Dict[NotePosition, Set[NotePosition]]:
+    "Return a dict of arrow position to landing note candidates"
+    arrow_to_note_candidates: Dict[NotePosition, Set[NotePosition]] = {}
+    for y, x in product(range(4), range(4)):
+        pos = NotePosition(x, y)
+        if pos in should_skip:
+            continue
+        symbol = bloc[y][x]
+        if symbol not in LONG_ARROWS:
+            continue
+
+        # at this point we are sure we have a long arrow
+        # we need to check in its direction for note candidates
+        note_candidates: Set[Tuple[int, int]] = set()
+        𝛿pos = LONG_DIRECTION[symbol]
+        candidate = NotePosition(x, y) + 𝛿pos
+        while 0 <= candidate.x < 4 and 0 <= candidate.y < 4:
+            if candidate not in should_skip:
+                new_symbol = bloc[candidate.y][candidate.x]
+                if new_symbol in note_symbols:
+                    note_candidates.add(candidate)
+            candidate += 𝛿pos
+
+        # if no notes have been crossed, we just ignore the arrow
+        if note_candidates:
+            arrow_to_note_candidates[pos] = note_candidates
+
+    return arrow_to_note_candidates
+
+
+def pick_correct_long_note_candidates(
+    arrow_to_note_candidates: Dict[NotePosition, Set[NotePosition]],
+    bloc: List[List[str]],
+    should_skip: Set[NotePosition],
+    currently_defined_symbols: Dict[str, Decimal],
+    section_starting_beat: Decimal,
+) -> Iterator[UnfinishedLongNote]:
+    """Believe it or not, assigning each arrow to a valid note candidate
+    involves whipping out a CSP solver"""
+    problem = constraint.Problem()
+    for arrow_pos, note_candidates in arrow_to_note_candidates.items():
+        problem.addVariable(arrow_pos, list(note_candidates))
+    problem.addConstraint(constraint.AllDifferentConstraint())
+    solutions = problem.getSolutions()
+    if not solutions:
+        raise SyntaxError(
+            "Invalid long note arrow pattern in bloc :\n"
+            + "\n".join("".join(line) for line in bloc)
+        )
+    solution = min(solutions, key=long_note_solution_heuristic)
+    if len(solutions) > 1 and not is_simple_solution(
+        solution, arrow_to_note_candidates
+    ):
+        warnings.warn(
+            "Ambiguous arrow pattern in bloc :\n"
+            + "\n".join("".join(line) for line in bloc)
+            + "\n"
+            "The resulting long notes might not be what you expect"
+        )
+    for arrow_pos, note_pos in solution.items():
+        should_skip.add(arrow_pos)
+        should_skip.add(note_pos)
+        symbol = bloc[note_pos.y][note_pos.x]
+        symbol_time = currently_defined_symbols[symbol]
+        note_time = decimal_to_beats(section_starting_beat + symbol_time)
+        yield UnfinishedLongNote(time=note_time, position=note_pos, tail_tip=arrow_pos)
+
+
+def note_distance(a: NotePosition, b: NotePosition) -> float:
+    return abs(complex(*a.as_tuple()) - complex(*b.as_tuple()))
+
+
+def long_note_solution_heuristic(
+    solution: Dict[NotePosition, NotePosition]
+) -> Tuple[int, int, int]:
+    c = Counter(int(note_distance(k, v)) for k, v in solution.items())
+    return (c[3], c[2], c[1])
+
+
+def is_simple_solution(solution, domains) -> bool:
+    return all(
+        solution[v] == min(domains[v], key=lambda e: note_distance(e, v))
+        for v in solution.keys()
+    )
 
 
 class JubeatAnalyserParser:

@@ -7,7 +7,7 @@ from functools import partial
 from io import StringIO
 from itertools import chain, zip_longest
 from math import ceil
-from typing import Dict, Iterator, List, Optional, Tuple, Union, Set
+from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from more_itertools import chunked, collapse, intersperse, mark_ends, windowed
 from path import Path
@@ -36,18 +36,18 @@ from ..dump_tools import (
     DIRECTION_TO_LINE,
     NOTE_TO_CIRCLE_FREE_SYMBOL,
     JubeatAnalyserDumpedSection,
-    create_sections_from_chart,
     LongNoteEnd,
     SortedDefaultDict,
+    create_sections_from_chart,
     fraction_to_decimal,
 )
 from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
-
 
 AnyNote = Union[TapNote, LongNote, LongNoteEnd]
 
 EMPTY_BEAT_SYMBOL = "－"  # U+0FF0D : FULLWIDTH HYPHEN-MINUS
 EMPTY_POSITION_SYMBOL = "□"  # U+025A1 : WHITE SQUARE
+
 
 @dataclass
 class Frame:
@@ -57,21 +57,23 @@ class Frame:
     def dump(self, length: Decimal) -> Iterator[str]:
         # Check that bars are contiguous
         for a, b in windowed(sorted(self.bars), 2):
-            if b is not None and b-a != 1:
+            if b is not None and b - a != 1:
                 raise ValueError("Frame has discontinuous bars")
         # Check all bars are in the same 4-bar group
-        if self.bars.keys() != set(bar%4 for bar in self.bars):
+        if self.bars.keys() != set(bar % 4 for bar in self.bars):
             raise ValueError("Frame contains bars from different 4-bar groups")
-        
+
         for pos, bar in zip_longest(self.dump_positions(), self.dump_bars(length)):
             if bar is None:
                 bar = ""
             yield f"{pos} {bar}"
-        
 
     def dump_positions(self) -> Iterator[str]:
         for y in range(4):
-            yield "".join(self.positions.get(NotePosition(x, y), EMPTY_POSITION_SYMBOL) for x in range(4))
+            yield "".join(
+                self.positions.get(NotePosition(x, y), EMPTY_POSITION_SYMBOL)
+                for x in range(4)
+            )
 
     def dump_bars(self, length: Decimal) -> Iterator[str]:
         all_bars = []
@@ -80,7 +82,7 @@ class Frame:
             time_index = i % 4
             symbol = self.bars.get(bar_index, {}).get(time_index, EMPTY_BEAT_SYMBOL)
             all_bars.append(symbol)
-        
+
         for i, bar in enumerate(chunked(all_bars, 4)):
             if i in self.bars:
                 yield f"|{''.join(bar)}|"
@@ -89,6 +91,19 @@ class Frame:
 
 
 class MemoDumpedSection(JubeatAnalyserDumpedSection):
+    def render(self, circle_free: bool = False) -> str:
+        blocs = []
+        commands = list(self._dump_commands())
+        if commands:
+            blocs.append(commands)
+        symbols = list(self._dump_symbol_definitions())
+        if symbols:
+            blocs.append(symbols)
+        notes = list(self._dump_notes(circle_free))
+        if notes:
+            blocs.append(notes)
+        return "\n".join(collapse(intersperse("", blocs)))
+
     def _dump_notes(self, circle_free: bool = False) -> Iterator[str]:
         notes_by_bar: Dict[int, List[AnyNote]] = defaultdict(list)
         bars: Dict[int, Dict[int, str]] = defaultdict(dict)
@@ -99,14 +114,17 @@ class MemoDumpedSection(JubeatAnalyserDumpedSection):
             bar_index = int(time_in_section)
             notes_by_bar[bar_index].append(note)
             if time_in_section % Fraction(1, 4) == 0:
-                time_index = int(time_in_section * 4)
+                time_in_bar = time_in_section % Fraction(1)
+                time_index = int(time_in_bar * 4)
                 if time_index not in bars[bar_index]:
                     symbol = next(symbols_iterator)
                     chosen_symbols[time_in_section] = symbol
                     bars[bar_index][time_index] = symbol
             elif time_in_section not in self.symbols:
-                raise ValueError(f"No symbol defined for time in section : {time_in_section}")
-        
+                raise ValueError(
+                    f"No symbol defined for time in section : {time_in_section}"
+                )
+
         # Create frame by bar
         section_symbols = ChainMap(chosen_symbols, self.symbols)
         frames_by_bar: Dict[int, List[Frame]] = defaultdict(list)
@@ -157,11 +175,14 @@ class MemoDumpedSection(JubeatAnalyserDumpedSection):
             #  - The previous and current bars are all in the same 4-bar group
             #  - The note positions in the previous frame do not clash with the current frame
             if (
-                len(frames) == 1 and
-                final_frames and
-                final_frames[-1].bars and
-                max(final_frames[-1].bars.keys()) // 4 == min(frames[0].bars.keys()) // 4 and
-                (not (final_frames[-1].positions.keys() & frames[0].positions.keys()))
+                len(frames) == 1
+                and final_frames
+                and final_frames[-1].bars
+                and max(final_frames[-1].bars.keys()) // 4
+                == min(frames[0].bars.keys()) // 4
+                and (
+                    not (final_frames[-1].positions.keys() & frames[0].positions.keys())
+                )
             ):
                 final_frames[-1].bars.update(frames[0].bars)
                 final_frames[-1].positions.update(frames[0].positions)
@@ -169,8 +190,7 @@ class MemoDumpedSection(JubeatAnalyserDumpedSection):
                 final_frames.extend(frames)
 
         dumped_frames = map(lambda f: f.dump(self.length), final_frames)
-        yield from collapse(intersperse("", dumped_frames))            
-
+        yield from collapse(intersperse("", dumped_frames))
 
 
 def _raise_if_unfit_for_memo(chart: Chart, timing: Timing, circle_free: bool = False):
@@ -201,9 +221,11 @@ def _dump_memo_chart(
 ) -> StringIO:
 
     _raise_if_unfit_for_memo(chart, timing, circle_free)
-    
-    sections = create_sections_from_chart(MemoDumpedSection, chart, difficulty, timing, metadata, circle_free)
-    
+
+    sections = create_sections_from_chart(
+        MemoDumpedSection, chart, difficulty, timing, metadata, circle_free
+    )
+
     # Jubeat Analyser format command
     sections[0].commands["memo"] = None
 
@@ -216,11 +238,14 @@ def _dump_memo_chart(
         section.symbols = existing_symbols
         for note in section.notes:
             time_in_section = note.time - section_start
-            if time_in_section % Fraction(1, 4) != 0 and time_in_section not in existing_symbols:
+            if (
+                time_in_section % Fraction(1, 4) != 0
+                and time_in_section not in existing_symbols
+            ):
                 new_symbol = next(extra_symbols)
                 section.symbol_definitions[time_in_section] = new_symbol
                 existing_symbols[time_in_section] = new_symbol
-    
+
     # Actual output to file
     file = StringIO()
     file.write(f"// Converted using jubeatools {__version__}\n")
@@ -232,7 +257,7 @@ def _dump_memo_chart(
 
 
 def _dump_memo_internal(song: Song, circle_free: bool = False) -> List[JubeatFile]:
-    files = []
+    files: List[JubeatFile] = []
     for difficulty, chart in song.charts.items():
         contents = _dump_memo_chart(
             difficulty,

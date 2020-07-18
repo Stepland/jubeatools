@@ -36,9 +36,11 @@ from ..load_tools import (
     JubeatAnalyserParser,
     UnfinishedLongNote,
     decimal_to_beats,
+    find_long_note_candidates,
     is_empty_line,
     is_simple_solution,
     long_note_solution_heuristic,
+    pick_correct_long_note_candidates,
     split_double_byte_line,
 )
 from ..symbol_definition import is_symbol_definition, parse_symbol_definition
@@ -227,62 +229,22 @@ class MonoColumnParser(JubeatAnalyserParser):
             }
 
             # 2/3 : look for new long notes starting on this bloc
-            arrow_to_note_candidates: Dict[NotePosition, Set[NotePosition]] = {}
-            for y, x in product(range(4), range(4)):
-                pos = NotePosition(x, y)
-                if pos in should_skip:
-                    continue
-                symbol = bloc[y][x]
-                if symbol not in LONG_ARROWS:
-                    continue
-                # at this point we are sure we have a long arrow
-                # we need to check in its direction for note candidates
-                note_candidates: Set[Tuple[int, int]] = set()
-                𝛿pos = LONG_DIRECTION[symbol]
-                candidate = NotePosition(x, y) + 𝛿pos
-                while 0 <= candidate.x < 4 and 0 <= candidate.y < 4:
-                    if candidate in should_skip:
-                        continue
-                    new_symbol = bloc[candidate.y][candidate.x]
-                    if new_symbol in section.symbols:
-                        note_candidates.add(candidate)
-                    candidate += 𝛿pos
-                # if no notes have been crossed, we just ignore the arrow
-                if note_candidates:
-                    arrow_to_note_candidates[pos] = note_candidates
-
-            # Believe it or not, assigning each arrow to a valid note candidate
-            # involves whipping out a CSP solver
+            arrow_to_note_candidates = find_long_note_candidates(
+                bloc, section.symbols.keys(), should_skip
+            )
             if arrow_to_note_candidates:
-                problem = constraint.Problem()
-                for arrow_pos, note_candidates in arrow_to_note_candidates.items():
-                    problem.addVariable(arrow_pos, list(note_candidates))
-                problem.addConstraint(constraint.AllDifferentConstraint())
-                solutions = problem.getSolutions()
-                if not solutions:
-                    raise SyntaxError(
-                        "Invalid long note arrow pattern in bloc :\n"
-                        + "\n".join("".join(line) for line in bloc)
-                    )
-                solution = min(solutions, key=long_note_solution_heuristic)
-                if len(solutions) > 1 and not is_simple_solution(
-                    solution, arrow_to_note_candidates
-                ):
-                    warnings.warn(
-                        "Ambiguous arrow pattern in bloc :\n"
-                        + "\n".join("".join(line) for line in bloc)
-                        + "\n"
-                        "The resulting long notes might not be what you expect"
-                    )
-                for arrow_pos, note_pos in solution.items():
-                    should_skip.add(arrow_pos)
-                    should_skip.add(note_pos)
-                    symbol = bloc[note_pos.y][note_pos.x]
-                    symbol_time = section.symbols[symbol]
-                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
-                    unfinished_longs[note_pos] = UnfinishedLongNote(
-                        time=note_time, position=note_pos, tail_tip=arrow_pos,
-                    )
+                unfinished_longs.update(
+                    {
+                        note.position: note
+                        for note in pick_correct_long_note_candidates(
+                            arrow_to_note_candidates,
+                            bloc,
+                            should_skip,
+                            section.symbols,
+                            section_starting_beat,
+                        )
+                    }
+                )
 
             # 3/3 : find regular notes
             for y, x in product(range(4), range(4)):

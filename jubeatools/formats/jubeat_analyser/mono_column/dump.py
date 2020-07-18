@@ -33,15 +33,28 @@ from ..dump_tools import (
     DIRECTION_TO_ARROW,
     DIRECTION_TO_LINE,
     JubeatAnalyserDumpedSection,
-    create_sections_from_chart,
     LongNoteEnd,
     SortedDefaultDict,
+    create_sections_from_chart,
     fraction_to_decimal,
 )
 from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 
 class MonoColumnDumpedSection(JubeatAnalyserDumpedSection):
+    def render(self, circle_free: bool = False) -> str:
+        blocs = []
+        commands = list(self._dump_commands())
+        if commands:
+            blocs.append(commands)
+        symbols = list(self._dump_symbol_definitions())
+        if symbols:
+            blocs.append(symbols)
+        notes = list(self._dump_notes(circle_free))
+        if notes:
+            blocs.append(notes)
+        return "\n".join(collapse([intersperse("", blocs), "--"]))
+
     def _dump_notes(self, circle_free: bool = False,) -> Iterator[str]:
         frames: List[Dict[NotePosition, str]] = []
         frame: Dict[NotePosition, str] = {}
@@ -122,6 +135,7 @@ def _raise_if_unfit_for_mono_column(
             " representable in #circlefree mode"
         )
 
+
 def _dump_mono_column_chart(
     difficulty: str,
     chart: Chart,
@@ -132,8 +146,10 @@ def _dump_mono_column_chart(
 
     _raise_if_unfit_for_mono_column(chart, timing, circle_free)
 
-    sections = create_sections_from_chart(MonoColumnDumpedSection, chart, difficulty, timing, metadata, circle_free)
-    
+    sections = create_sections_from_chart(
+        MonoColumnDumpedSection, chart, difficulty, timing, metadata, circle_free
+    )
+
     # Define extra symbols
     existing_symbols = deepcopy(BEATS_TIME_TO_SYMBOL)
     extra_symbols = iter(DEFAULT_EXTRA_SYMBOLS)

@@ -1,8 +1,19 @@
 from decimal import Decimal
+from fractions import Fraction
 
 from hypothesis import given
 
-from jubeatools.song import BeatsTime, BPMEvent, Chart, Metadata, SecondsTime, Timing
+from jubeatools.song import (
+    BeatsTime,
+    BPMEvent,
+    Chart,
+    LongNote,
+    Metadata,
+    NotePosition,
+    SecondsTime,
+    TapNote,
+    Timing,
+)
 from jubeatools.testutils.strategies import NoteOption
 from jubeatools.testutils.strategies import notes as notes_strat
 

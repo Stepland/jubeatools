@@ -5,12 +5,20 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from fractions import Fraction
 from itertools import chain
-from typing import Dict, Optional, List, Union, Iterator, Callable, Mapping
+from typing import Callable, Dict, Iterator, List, Mapping, Optional, Union
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
 from sortedcontainers import SortedDict, SortedKeyList
 
-from jubeatools.song import BeatsTime, TapNote, LongNote, NotePosition, Chart, Timing, Metadata
+from jubeatools.song import (
+    BeatsTime,
+    Chart,
+    LongNote,
+    Metadata,
+    NotePosition,
+    TapNote,
+    Timing,
+)
 
 from .command import dump_command
 from .symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
@@ -28,7 +36,7 @@ COMMAND_ORDER = [
     "jacket",
     "prevpos",
     "holdbyarrow",
-    "circlefree"
+    "circlefree",
 ]
 
 BEATS_TIME_TO_SYMBOL = {
@@ -48,6 +56,7 @@ DIRECTION_TO_ARROW = {
     NotePosition(0, 1): "∧",  # U+2227 : LOGICAL AND
 }
 
+# do NOT use the regular vertical bar, it will clash with the timing portion
 DIRECTION_TO_LINE = {
     NotePosition(-1, 0): "―",  # U+2015 : HORIZONTAL BAR
     NotePosition(1, 0): "―",
@@ -70,6 +79,7 @@ DEFAULT_EXTRA_SYMBOLS = (
 def fraction_to_decimal(frac: Fraction):
     "Thanks stackoverflow ! https://stackoverflow.com/a/40468867/10768117"
     return frac.numerator / Decimal(frac.denominator)
+
 
 @dataclass(frozen=True)
 class LongNoteEnd:
@@ -106,19 +116,6 @@ class JubeatAnalyserDumpedSection(ABC):
     symbols: Dict[BeatsTime, str] = field(default_factory=dict)
     notes: List[Union[TapNote, LongNote, LongNoteEnd]] = field(default_factory=list)
 
-    def render(self, circle_free: bool = False) -> str:
-        blocs = []
-        commands = list(self._dump_commands())
-        if commands:
-            blocs.append(commands)
-        symbols = list(self._dump_symbol_definitions())
-        if symbols:
-            blocs.append(symbols)
-        notes = list(self._dump_notes(circle_free))
-        if notes:
-            blocs.append(notes)
-        return "\n".join(collapse([intersperse("", blocs), "--"]))
-
     def _dump_commands(self) -> Iterator[str]:
         keys = chain(COMMAND_ORDER, self.commands.keys() - set(COMMAND_ORDER))
         for key in keys:
@@ -144,7 +141,7 @@ def create_sections_from_chart(
     difficulty: str,
     timing: Timing,
     metadata: Metadata,
-    circle_free: bool
+    circle_free: bool,
 ) -> Mapping[BeatsTime, JubeatAnalyserDumpedSection]:
     sections = SortedDefaultDict(section_factory)
 
@@ -210,5 +207,5 @@ def create_sections_from_chart(
         sections[key].notes = list(
             notes.irange_key(min_key=key, max_key=next_key, inclusive=(True, False))
         )
-    
+
     return sections

@@ -3,6 +3,7 @@ Hypothesis strategies to generate notes and charts
 """
 from enum import Enum, Flag, auto
 from itertools import product
+from typing import Set, Union
 
 import hypothesis.strategies as st
 from multidict import MultiDict
@@ -111,7 +112,7 @@ def notes(draw, options: NoteOption):
         return raw_notes
     else:
         last_notes = {NotePosition(x, y): None for y, x in product(range(4), range(4))}
-        notes = set()
+        notes: Set[Union[TapNote, LongNote]] = set()
         for note in sorted(raw_notes, key=lambda n: (n.time, n.position)):
             last_note_time = last_notes[note.position]
             if last_note_time is None:

@@ -8,7 +8,7 @@ from itertools import chain, product, zip_longest
 from typing import Dict, Iterator, List, Mapping, Optional, Set, Tuple, Union
 
 import constraint
-from more_itertools import mark_ends, collapse
+from more_itertools import collapse, mark_ends
 from parsimonious import Grammar, NodeVisitor, ParseError
 from path import Path
 
@@ -33,9 +33,11 @@ from ..load_tools import (
     JubeatAnalyserParser,
     UnfinishedLongNote,
     decimal_to_beats,
+    find_long_note_candidates,
     is_empty_line,
     is_simple_solution,
     long_note_solution_heuristic,
+    pick_correct_long_note_candidates,
     split_double_byte_line,
 )
 from ..symbol_definition import is_symbol_definition, parse_symbol_definition
@@ -44,9 +46,8 @@ from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 memo_chart_line_grammar = Grammar(
     r"""
     line            = ws position_part ws (timing_part ws)? comment?
-    position_part   = ~r"[^*#:|｜/\s]{4,8}"
-    timing_part     = bar ~r"[^*#:|｜/\s]+" bar
-    bar             = "|" / "｜"
+    position_part   = ~r"[^*#:|/\s]{4,8}"
+    timing_part     = "|" ~r"[^*#:|/\s]+" "|"
     ws              = ~r"[\t ]*"
     comment         = ~r"//.*"
 """
@@ -265,32 +266,29 @@ class MemoParser(JubeatAnalyserParser):
 
     def _iter_frames(
         self,
-    ) -> Iterator[
-        Tuple[Mapping[str, Decimal], Decimal, MemoFrame, Decimal, MemoLoadedSection]
-    ]:
+    ) -> Iterator[Tuple[Mapping[str, Decimal], MemoFrame, Decimal, MemoLoadedSection]]:
         """iterate over tuples of
         currently_defined_symbols, frame_starting_beat, frame, section_starting_beat, section"""
         local_symbols: Dict[str, Decimal] = {}
         section_starting_beat = Decimal(0)
         for section in self.sections:
             frame_starting_beat = Decimal(0)
-            for frame in section.frames:
+            for i, frame in enumerate(section.frames):
                 if frame.timing_part:
+                    frame_starting_beat = sum(f.duration for f in section.frames[:i])
                     local_symbols = {
-                        symbol: Decimal("0.25") * i
+                        symbol: Decimal("0.25") * i + frame_starting_beat
                         for i, symbol in enumerate(collapse(frame.timing_part))
                         if symbol not in EMPTY_BEAT_SYMBOLS
                     }
                 currently_defined_symbols = ChainMap(local_symbols, section.symbols)
-                yield currently_defined_symbols, frame_starting_beat, frame, section_starting_beat, section
-                frame_starting_beat += frame.duration
+                yield currently_defined_symbols, frame, section_starting_beat, section
             section_starting_beat += section.length
 
     def _iter_notes(self) -> Iterator[Union[TapNote, LongNote]]:
         unfinished_longs: Dict[NotePosition, UnfinishedLongNote] = {}
         for (
             currently_defined_symbols,
-            frame_starting_beat,
             frame,
             section_starting_beat,
             section,
@@ -319,9 +317,7 @@ class MemoParser(JubeatAnalyserParser):
                         continue
 
                 should_skip.add(pos)
-                note_time = decimal_to_beats(
-                    section_starting_beat + frame_starting_beat + symbol_time
-                )
+                note_time = decimal_to_beats(section_starting_beat + symbol_time)
                 yield unfinished_long.ends_at(note_time)
 
             unfinished_longs = {
@@ -329,59 +325,22 @@ class MemoParser(JubeatAnalyserParser):
             }
 
             # 2/3 : look for new long notes starting on this bloc
-            arrow_to_note_candidates: Dict[NotePosition, Set[NotePosition]] = {}
-            for y, x in product(range(4), range(4)):
-                pos = NotePosition(x, y)
-                if pos in should_skip:
-                    continue
-                symbol = frame.position_part[y][x]
-                if symbol not in LONG_ARROWS:
-                    continue
-                # at this point we are sure we have a long arrow
-                # we need to check in its direction for note candidates
-                note_candidates: Set[Tuple[int, int]] = set()
-                𝛿pos = LONG_DIRECTION[symbol]
-                candidate = NotePosition(x, y) + 𝛿pos
-                while 0 <= candidate.x < 4 and 0 <= candidate.y < 4:
-                    if candidate in should_skip:
-                        continue
-                    new_symbol = frame.position_part[candidate.y][candidate.x]
-                    if new_symbol in currently_defined_symbols:
-                        note_candidates.add(candidate)
-                    candidate += 𝛿pos
-                # if no notes have been crossed, we just ignore the arrow
-                if note_candidates:
-                    arrow_to_note_candidates[pos] = note_candidates
-
-            # Believe it or not, assigning each arrow to a valid note candidate
-            # involves whipping out a CSP solver
+            arrow_to_note_candidates = find_long_note_candidates(
+                frame.position_part, currently_defined_symbols.keys(), should_skip
+            )
             if arrow_to_note_candidates:
-                problem = constraint.Problem()
-                for arrow_pos, note_candidates in arrow_to_note_candidates.items():
-                    problem.addVariable(arrow_pos, list(note_candidates))
-                problem.addConstraint(constraint.AllDifferentConstraint())
-                solutions = problem.getSolutions()
-                if not solutions:
-                    raise SyntaxError(
-                        "Invalid long note arrow pattern in section :\n" + str(section)
-                    )
-                solution = min(solutions, key=long_note_solution_heuristic)
-                if len(solutions) > 1 and not is_simple_solution(
-                    solution, arrow_to_note_candidates
-                ):
-                    warnings.warn(
-                        "Ambiguous arrow pattern in section :\n" + str(section) + "\n"
-                        "The chosen long notes might not be what you expect"
-                    )
-                for arrow_pos, note_pos in solution.items():
-                    should_skip.add(arrow_pos)
-                    should_skip.add(note_pos)
-                    symbol = frame.position_part[note_pos.y][note_pos.x]
-                    symbol_time = section.symbols[symbol]
-                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
-                    unfinished_longs[note_pos] = UnfinishedLongNote(
-                        time=note_time, position=note_pos, tail_tip=arrow_pos,
-                    )
+                unfinished_longs.update(
+                    {
+                        note.position: note
+                        for note in pick_correct_long_note_candidates(
+                            arrow_to_note_candidates,
+                            frame.position_part,
+                            should_skip,
+                            currently_defined_symbols,
+                            section_starting_beat,
+                        )
+                    }
+                )
 
             # 3/3 : find regular notes
             for y, x in product(range(4), range(4)):
@@ -393,15 +352,12 @@ class MemoParser(JubeatAnalyserParser):
                     symbol_time = currently_defined_symbols[symbol]
                 except KeyError:
                     continue
-                note_time = decimal_to_beats(
-                    section_starting_beat + frame_starting_beat + symbol_time
-                )
+                note_time = decimal_to_beats(section_starting_beat + symbol_time)
                 yield TapNote(note_time, position)
 
     def _iter_notes_without_longs(self) -> Iterator[TapNote]:
         for (
             currently_defined_symbols,
-            frame_starting_beat,
             frame,
             section_starting_beat,
             _,
@@ -413,9 +369,7 @@ class MemoParser(JubeatAnalyserParser):
                     symbol_time = currently_defined_symbols[symbol]
                 except KeyError:
                     continue
-                note_time = decimal_to_beats(
-                    section_starting_beat + frame_starting_beat + symbol_time
-                )
+                note_time = decimal_to_beats(section_starting_beat + symbol_time)
                 position = NotePosition(x, y)
                 yield TapNote(note_time, position)
 
