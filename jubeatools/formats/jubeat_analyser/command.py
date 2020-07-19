@@ -42,7 +42,7 @@ command_grammar = Grammar(
     value           = value_in_quotes / number
     value_in_quotes = '"' quoted_value '"'
     quoted_value    = ~r"[^\"]*"
-    number          = ~r"\d+(\.\d+)?"
+    number          = ~r"-?\d+(\.\d+)?"
     ws              = ~r"[\t ]*"
     comment         = ~r"//.*"
     """
@@ -99,7 +99,7 @@ def parse_command(line: str) -> Tuple[str, str]:
             raise
 
 
-def dump_command(key: str, value: Any) -> str:
+def dump_command(key: str, value: Any = None) -> str:
     if len(key) == 1:
         key_part = key
     else:

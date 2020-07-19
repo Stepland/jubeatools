@@ -2,7 +2,7 @@
 A toolbox for jubeat file formats
 
 ## Conversion
-jubeatools can handle conversions in the following way :
+jubeatools supports the following formats :
 
 ### Memon
 |        | input | output |
@@ -14,6 +14,7 @@ jubeatools can handle conversions in the following way :
 ### Jubeat Analyser
 |                      | input | output |
 |----------------------|:-----:|:------:|
+| #memo2               | ✔️     | ✔️      |
 | #memo1               | ✔️     | ✔️      |
 | #memo                | ✔️     | ✔️      |
 | mono-column (1列形式) | ✔️     | ✔️      |

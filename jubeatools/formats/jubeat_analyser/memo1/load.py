@@ -169,7 +169,7 @@ class Memo1Parser(JubeatAnalyserParser):
             memo_chart_line = parse_double_column_chart_line(line)
             self.append_chart_line(memo_chart_line)
         else:
-            raise SyntaxError(f"not a valid mono-column file line : {line}")
+            raise SyntaxError(f"not a valid memo1 file line : {line}")
 
     def notes(self) -> Iterator[Union[TapNote, LongNote]]:
         if self.hold_by_arrow:
@@ -327,5 +327,5 @@ def _load_memo1_file(lines: List[str]) -> Song:
 
 def load_memo1(path: Path) -> Song:
     files = load_files(path)
-    charts = [_load_memo_file(lines) for _, lines in files.items()]
+    charts = [_load_memo1_file(lines) for _, lines in files.items()]
     return reduce(Song.merge, charts)

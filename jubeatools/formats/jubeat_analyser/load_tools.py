@@ -273,21 +273,24 @@ class JubeatAnalyserParser:
             method(value)
         else:
             method()
+    
+    def do_b(self, value):
+        self.beats_per_section = Decimal(value)
 
     def do_m(self, value):
         self.music = value
+    
+    def do_o(self, value):
+        self.offset = int(value)
+    
+    def do_r(self, value):
+        self.offset += int(value)
 
     def do_t(self, value):
         self.current_tempo = Decimal(value)
         self.timing_events.append(
             BPMEvent(self.section_starting_beat, BPM=self.current_tempo)
         )
-
-    def do_o(self, value):
-        self.offset = int(value)
-
-    def do_b(self, value):
-        self.beats_per_section = Decimal(value)
 
     def do_pw(self, value):
         if int(value) != 4:

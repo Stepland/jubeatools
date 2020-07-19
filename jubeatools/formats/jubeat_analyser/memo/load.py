@@ -179,7 +179,7 @@ class MemoParser(JubeatAnalyserParser):
             memo_chart_line = parse_double_column_chart_line(line)
             self.append_chart_line(memo_chart_line)
         else:
-            raise SyntaxError(f"not a valid mono-column file line : {line}")
+            raise SyntaxError(f"not a valid memo file line : {line}")
 
     def notes(self) -> Iterator[Union[TapNote, LongNote]]:
         if self.hold_by_arrow:
