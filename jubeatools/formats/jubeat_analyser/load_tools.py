@@ -273,16 +273,16 @@ class JubeatAnalyserParser:
             method(value)
         else:
             method()
-    
+
     def do_b(self, value):
         self.beats_per_section = Decimal(value)
 
     def do_m(self, value):
         self.music = value
-    
+
     def do_o(self, value):
         self.offset = int(value)
-    
+
     def do_r(self, value):
         self.offset += int(value)
 

@@ -75,6 +75,7 @@ class BPM:
 
 Event = Union[Notes, Stop, BPM]
 
+
 @dataclass
 class RawMemo2ChartLine:
     position: str
@@ -86,11 +87,14 @@ class RawMemo2ChartLine:
         else:
             return self.position
 
+
 @dataclass
 class Memo2ChartLine:
     """timing part only contains notes"""
+
     position: str
     timing: Optional[List[str]]
+
 
 memo2_chart_line_grammar = Grammar(
     r"""
@@ -148,9 +152,8 @@ def is_memo2_chart_line(line: str) -> bool:
 
 
 def parse_memo2_chart_line(line: str) -> RawMemo2ChartLine:
-    return Memo2ChartLineVisitor().visit(
-        memo2_chart_line_grammar.parse(line)
-    )
+    return Memo2ChartLineVisitor().visit(memo2_chart_line_grammar.parse(line))
+
 
 @dataclass
 class Memo2Frame:
@@ -177,12 +180,12 @@ class Memo2Parser(JubeatAnalyserParser):
         self.offset = None
         self.current_beat = BeatsTime(0)
         self.frames: List[Memo2Frame] = []
-    
+
     def do_b(self, value):
         raise ValueError(
             "beat command (b=...) found, this commands cannot be used in #memo2 files"
         )
-    
+
     def do_t(self, value):
         if self.frames:
             raise ValueError(
@@ -190,9 +193,7 @@ class Memo2Parser(JubeatAnalyserParser):
                 "this should not happen in #memo2 files"
             )
         else:
-            self.timing_events.append(
-                BPMEvent(self.current_beat, BPM=Decimal(value))
-            )
+            self.timing_events.append(BPMEvent(self.current_beat, BPM=Decimal(value)))
 
     def do_r(self, value):
         if self.frames:
@@ -207,7 +208,7 @@ class Memo2Parser(JubeatAnalyserParser):
 
     def do_memo(self):
         raise ValueError("#memo command found : This is not a memo2 file")
-    
+
     def do_memo1(self):
         raise ValueError("#memo1 command found : This is not a memo2 file")
 
@@ -255,13 +256,10 @@ class Memo2Parser(JubeatAnalyserParser):
                     in_bar_beat += symbol_duration
                 elif isinstance(event, BPM):
                     self.timing_events.append(
-                        BPMEvent(
-                            time=self.current_beat+in_bar_beat,
-                            BPM=event.value
-                        )
+                        BPMEvent(time=self.current_beat + in_bar_beat, BPM=event.value)
                     )
                 elif isinstance(event, Stop):
-                    time = self.current_beat+in_bar_beat
+                    time = self.current_beat + in_bar_beat
                     if time != 0:
                         raise ValueError(
                             "Chart contains a pause that's not happening at the "
@@ -274,7 +272,7 @@ class Memo2Parser(JubeatAnalyserParser):
                         # beat of the chart or if both an in-bar pause and an
                         # o=... command exist
                         self.offset += event.duration
-            
+
             bar_notes = [e for e in bar if isinstance(e, str)]
             line = Memo2ChartLine(raw_line.position, bar_notes)
 
@@ -338,9 +336,7 @@ class Memo2Parser(JubeatAnalyserParser):
 
     def _iter_frames(
         self,
-    ) -> Iterator[
-        Tuple[Mapping[str, BeatsTime], Memo2Frame, BeatsTime]
-    ]:
+    ) -> Iterator[Tuple[Mapping[str, BeatsTime], Memo2Frame, BeatsTime]]:
         """iterate over tuples of (currently_defined_symbols, frame)"""
         local_symbols: Dict[str, Decimal] = {}
         frame_starting_beat = BeatsTime(0)
@@ -348,7 +344,9 @@ class Memo2Parser(JubeatAnalyserParser):
             if frame.timing_part:
                 frame_starting_beat = sum(f.duration for f in self.frames[:i])
                 local_symbols = {
-                    symbol: frame_starting_beat + bar_index + BeatsTime(symbol_index, len(bar))
+                    symbol: frame_starting_beat
+                    + bar_index
+                    + BeatsTime(symbol_index, len(bar))
                     for bar_index, bar in enumerate(frame.timing_part)
                     for symbol_index, symbol in enumerate(bar)
                     if symbol not in EMPTY_BEAT_SYMBOLS

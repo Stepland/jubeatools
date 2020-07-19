@@ -16,13 +16,13 @@ from sortedcontainers import SortedKeyList
 from jubeatools import __version__
 from jubeatools.formats.filetypes import ChartFile, JubeatFile
 from jubeatools.song import (
-    BPMEvent,
-    SecondsTime,
     BeatsTime,
+    BPMEvent,
     Chart,
     LongNote,
     Metadata,
     NotePosition,
+    SecondsTime,
     Song,
     TapNote,
     Timing,
@@ -93,6 +93,7 @@ class StopEvent:
 @dataclass
 class Memo2Section:
     """A 4-beat-long group of notes"""
+
     notes: List[AnyNote] = field(default_factory=list)
     events: List[Union[BPMEvent, StopEvent]] = field(default_factory=list)
 
@@ -121,11 +122,13 @@ class Memo2Section:
             events = events_by_bar.get(bar_index, [])
             bar_length = lcm(
                 *(note.time.denominator for note in notes),
-                *(event.time.denominator for event in events)
+                *(event.time.denominator for event in events),
             )
             if bar_length < 3:
                 bar_length = 4
-            bar_dict: Dict[int, List[Union[str, BPMEvent, StopEvent]]] = defaultdict(list)
+            bar_dict: Dict[int, List[Union[str, BPMEvent, StopEvent]]] = defaultdict(
+                list
+            )
             for note in notes:
                 time_in_section = note.time % BeatsTime(4)
                 time_in_bar = note.time % Fraction(1)
@@ -145,7 +148,9 @@ class Memo2Section:
             bar = []
             for i in range(bar_length):
                 events_and_note = bar_dict.get(i, [])
-                stops = list(filter(lambda e: isinstance(e, StopEvent), events_and_note))
+                stops = list(
+                    filter(lambda e: isinstance(e, StopEvent), events_and_note)
+                )
                 bpms = list(filter(lambda e: isinstance(e, BPMEvent), events_and_note))
                 notes = list(filter(lambda e: isinstance(e, str), events_and_note))
                 assert len(notes) <= 1
@@ -154,12 +159,12 @@ class Memo2Section:
 
                 for bpm in bpms:
                     bar.append(f"({bpm.BPM})")
-                
+
                 if notes:
                     note = notes[0]
                 else:
                     note = EMPTY_BEAT_SYMBOL
-                
+
                 bar.append(note)
 
             bars[bar_index] = bar
@@ -229,6 +234,7 @@ class Memo2Section:
 
         dumped_frames = map(lambda f: f.dump(), final_frames)
         yield from collapse(intersperse("", dumped_frames))
+
 
 def _raise_if_unfit_for_memo2(chart: Chart, timing: Timing, circle_free: bool = False):
     if len(timing.events) < 1:
@@ -311,7 +317,7 @@ def _dump_memo2_chart(
 
     if circle_free:
         file.write(dump_command("circlefree", 1) + "\n")
-    
+
     file.write(dump_command("memo2") + "\n")
 
     # Notes

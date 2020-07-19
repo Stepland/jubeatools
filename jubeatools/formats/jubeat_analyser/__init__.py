@@ -11,6 +11,10 @@ on these pages :
 - http://yosh52.web.fc2.com/jubeat/holdmarker.html
 """
 
+from .memo1.dump import dump_memo1
+from .memo1.load import load_memo1
+from .memo2.dump import dump_memo2
+from .memo2.load import load_memo2
 from .memo.dump import dump_memo
 from .memo.load import load_memo
 from .mono_column.dump import dump_mono_column
