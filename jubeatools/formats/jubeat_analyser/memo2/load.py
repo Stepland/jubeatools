@@ -449,7 +449,7 @@ def _load_memo2_file(lines: List[str]) -> Song:
         metadata.preview_length = SecondsTime(10)
 
     timing = Timing(
-        events=parser.timing_events, beat_zero_offset=SecondsTime(parser.offset) / 1000
+        events=parser.timing_events, beat_zero_offset=SecondsTime(parser.offset or 0) / 1000
     )
     charts = {
         parser.difficulty: Chart(
