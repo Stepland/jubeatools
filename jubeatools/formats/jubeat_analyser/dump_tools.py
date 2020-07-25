@@ -226,20 +226,28 @@ def jubeat_analyser_file_dumper(
         files = internal_dumper(song, circle_free)
         res = {}
         if path.isdir():
-            name_base = song.metadata.title
-            folder = path
+            name_format = song.metadata.title + " {difficulty}{dedup_index}.txt"
         else:
-            name_base = path.stem
-            folder = path.parent
+            name_format = "{base}{dedup_index}{ext}"
 
         for chartfile in files:
-            difficulty = DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty)
-            filename = f"{name_base} {difficulty}.txt"
             i = 0
-            while folder / filename in res:
+            filepath = name_format.format(
+                base=path.stripext(),
+                difficulty = DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty),
+                dedup_index = "" if i == 0 else f"-{i}",
+                ext=path.ext,
+            )
+            while filepath in res:
                 i += 1
-                filename = f"{name_base} {difficulty}-{i}.txt"
-            res[folder / filename] = chartfile.contents.getvalue().encode(
+                filepath = name_format.format(
+                    base=path.stripext(),
+                    difficulty = DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty),
+                    dedup_index = "" if i == 0 else f"-{i}",
+                    ext=path.ext,
+                )
+
+            res[Path(filepath)] = chartfile.contents.getvalue().encode(
                 "shift-jis-2004"
             )
 
