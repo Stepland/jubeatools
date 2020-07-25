@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "jubeatools"
-version = "0.1.0"
+version = "0.1.1"
 description = "A toolbox for jubeat file formats"
 authors = ["Stepland <16676308+Stepland@users.noreply.github.com>"]
 readme = "README.md"
+repository = "https://github.com/Stepland/jubeatools"
 
 [tool.poetry.dependencies]
 python = "^3.8"
