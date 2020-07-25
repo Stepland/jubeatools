@@ -225,13 +225,13 @@ class Memo2Parser(JubeatAnalyserParser):
             self._do_bpp(value)
 
     def append_chart_line(self, raw_line: RawMemo2ChartLine):
-        if len(raw_line.position.encode("shift_jis_2004")) != 4 * self.bytes_per_panel:
+        if len(raw_line.position.encode("shift-jis-2004")) != 4 * self.bytes_per_panel:
             raise SyntaxError(
                 f"Invalid chart line for #bpp={self.bytes_per_panel} : {raw_line}"
             )
         if raw_line.timing is not None and self.bytes_per_panel == 2:
             if any(
-                len(event.string.encode("shift_jis_2004")) % 2 != 0
+                len(event.string.encode("shift-jis-2004")) % 2 != 0
                 for event in raw_line.timing
                 if isinstance(event, Notes)
             ):

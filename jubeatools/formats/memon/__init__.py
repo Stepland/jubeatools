@@ -282,10 +282,10 @@ def _raise_if_unfit_for_v0(song: Song, version: str) -> None:
             )
 
 
-def _dump_to_json(memon: dict) -> StringIO:
+def _dump_to_json(memon: dict) -> bytes:
     memon_fp = StringIO()
     json.dump(memon, memon_fp, use_decimal=True, indent=4)
-    return memon_fp
+    return memon_fp.getvalue().encode("utf-8")
 
 
 def _compute_resolution(notes: List[Union[TapNote, LongNote]]) -> int:
@@ -320,7 +320,7 @@ def _dump_memon_note_v0(
     return memon_note
 
 
-def dump_memon_legacy(song: Song) -> Dict[str, IO]:
+def dump_memon_legacy(song: Song, path: Path) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "legacy")
 
@@ -351,10 +351,15 @@ def dump_memon_legacy(song: Song) -> Dict[str, IO]:
             }
         )
 
-    return {f"{song.metadata.title}.memon": _dump_to_json(memon)}
+    if path.isdir():
+        filepath = path / f"{song.metadata.title}.memon"
+    else:
+        filepath = path
+
+    return {filepath: _dump_to_json(memon)}
 
 
-def dump_memon_0_1_0(song: Song) -> Dict[str, IO]:
+def dump_memon_0_1_0(song: Song, path: Path) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "legacy")
 
@@ -381,10 +386,15 @@ def dump_memon_0_1_0(song: Song) -> Dict[str, IO]:
             ],
         }
 
-    return {f"{song.metadata.title}.memon": _dump_to_json(memon)}
+    if path.isdir():
+        filepath = path / f"{song.metadata.title}.memon"
+    else:
+        filepath = path
+
+    return {filepath: _dump_to_json(memon)}
 
 
-def dump_memon_0_2_0(song: Song) -> Dict[str, IO]:
+def dump_memon_0_2_0(song: Song, path: Path) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "legacy")
 
@@ -418,4 +428,9 @@ def dump_memon_0_2_0(song: Song) -> Dict[str, IO]:
             ],
         }
 
-    return {f"{song.metadata.title}.memon": _dump_to_json(memon)}
+    if path.isdir():
+        filepath = path / f"{song.metadata.title}.memon"
+    else:
+        filepath = path
+
+    return {filepath: _dump_to_json(memon)}

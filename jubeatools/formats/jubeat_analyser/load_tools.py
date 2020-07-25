@@ -47,7 +47,7 @@ EMPTY_LINE = re.compile(r"\s*(//.*)?")
 
 # Any unicode character that's both :
 #  - confusable with a dash/hyphen
-#  - encodable in shift_jis_2004
+#  - encodable in shift-jis-2004
 # Gets added to the list of characters to be ignored in the timing section
 EMPTY_BEAT_SYMBOLS = {
     "一",  # U+4E00 - CJK UNIFIED IDEOGRAPH-4E00
@@ -130,12 +130,12 @@ def split_double_byte_line(line: str) -> List[str]:
     >>> split_chart_line("口⑪①25")
     ... ["口","⑪","①","25"]
     """
-    encoded_line = line.encode("shift_jis_2004")
+    encoded_line = line.encode("shift-jis-2004")
     if len(encoded_line) % 2 != 0:
         raise ValueError(f"Invalid chart line : {line}")
     symbols = []
     for i in range(0, len(encoded_line), 2):
-        symbols.append(encoded_line[i : i + 2].decode("shift_jis_2004"))
+        symbols.append(encoded_line[i : i + 2].decode("shift-jis-2004"))
     return symbols
 
 
@@ -346,7 +346,7 @@ class JubeatAnalyserParser:
 
     def define_symbol(self, symbol: str, timing: Decimal):
         bpp = self.bytes_per_panel
-        length_as_shift_jis = len(symbol.encode("shift_jis_2004"))
+        length_as_shift_jis = len(symbol.encode("shift-jis-2004"))
         if length_as_shift_jis != bpp:
             raise ValueError(
                 f"Invalid symbol definition. Since #bpp={bpp}, timing symbols "
@@ -361,7 +361,7 @@ class JubeatAnalyserParser:
         self.symbols[symbol] = timing
 
     def is_short_line(self, line: str) -> bool:
-        return len(line.encode("shift_jis_2004")) < self.bytes_per_panel * 4
+        return len(line.encode("shift-jis-2004")) < self.bytes_per_panel * 4
 
 
 @dataclass

@@ -40,6 +40,7 @@ from ..dump_tools import (
     SortedDefaultDict,
     create_sections_from_chart,
     fraction_to_decimal,
+    jubeat_analyser_file_dumper,
 )
 from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
@@ -57,7 +58,7 @@ class Frame:
     def dump(self, length: Decimal) -> Iterator[str]:
         # Check that bars are contiguous
         for a, b in windowed(sorted(self.bars), 2):
-            if b is not None and b - a != 1:
+            if b is not None and a is not None and b - a != 1:
                 raise ValueError("Frame has discontinuous bars")
         # Check all bars are in the same 4-bar group
         if self.bars.keys() != set(bar % 4 for bar in self.bars):
@@ -91,7 +92,7 @@ class Frame:
 
 
 class MemoDumpedSection(JubeatAnalyserDumpedSection):
-    def render(self, circle_free: bool = False) -> str:
+    def render(self, circle_free: bool) -> str:
         blocs = []
         commands = list(self._dump_commands())
         if commands:
@@ -104,7 +105,7 @@ class MemoDumpedSection(JubeatAnalyserDumpedSection):
             blocs.append(notes)
         return "\n".join(collapse(intersperse("", blocs)))
 
-    def _dump_notes(self, circle_free: bool = False) -> Iterator[str]:
+    def _dump_notes(self, circle_free: bool) -> Iterator[str]:
         notes_by_bar: Dict[int, List[AnyNote]] = defaultdict(list)
         bars: Dict[int, Dict[int, str]] = defaultdict(dict)
         chosen_symbols: Dict[BeatsTime, str] = {}
@@ -193,7 +194,7 @@ class MemoDumpedSection(JubeatAnalyserDumpedSection):
         yield from collapse(intersperse("", dumped_frames))
 
 
-def _raise_if_unfit_for_memo(chart: Chart, timing: Timing, circle_free: bool = False):
+def _raise_if_unfit_for_memo(chart: Chart, timing: Timing, circle_free: bool):
     if len(timing.events) < 1:
         raise ValueError("No BPM found in file") from None
 
@@ -217,7 +218,7 @@ def _dump_memo_chart(
     chart: Chart,
     metadata: Metadata,
     timing: Timing,
-    circle_free: bool = False,
+    circle_free: bool,
 ) -> StringIO:
 
     _raise_if_unfit_for_memo(chart, timing, circle_free)
@@ -227,7 +228,7 @@ def _dump_memo_chart(
     )
 
     # Jubeat Analyser format command
-    sections[0].commands["memo"] = None
+    sections[BeatsTime(0)].commands["memo"] = None
 
     # Define extra symbols
     existing_symbols: Dict[BeatsTime, str] = {}
@@ -256,8 +257,8 @@ def _dump_memo_chart(
     return file
 
 
-def _dump_memo_internal(song: Song, circle_free: bool = False) -> List[JubeatFile]:
-    files: List[JubeatFile] = []
+def _dump_memo_internal(song: Song, circle_free: bool) -> List[ChartFile]:
+    files: List[ChartFile] = []
     for difficulty, chart in song.charts.items():
         contents = _dump_memo_chart(
             difficulty,
@@ -271,5 +272,4 @@ def _dump_memo_internal(song: Song, circle_free: bool = False) -> List[JubeatFil
     return files
 
 
-def dump_memo(song: Song, circle_free: bool, folder: Path, name_pattern: str = None):
-    ...
+dump_memo = jubeat_analyser_file_dumper(_dump_memo_internal)

@@ -4,7 +4,7 @@ Mono column (not an official name)
 It's the format jubeat analyser expects when otherwise no format command has
 been found (like #memo #memo1 #memo2 or #boogie)
 
-Mono-column files are usually properly decoded using `shift_jis_2004`
+Mono-column files are usually properly decoded using `shift-jis-2004`
 
 Mono-column files are made up of several sections.
 Each section is made up of a series of command lines and chart lines.

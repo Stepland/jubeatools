@@ -5,7 +5,7 @@ from path import Path
 
 def load_files(path: Path) -> Dict[Path, List[str]]:
     # The vast majority of memo files you will encounter will be propely
-    # decoded using shift_jis_2004. Get ready for endless fun with the small
+    # decoded using shift-jis-2004. Get ready for endless fun with the small
     # portion of files that won't
     files = {}
     if path.isdir():
@@ -18,6 +18,6 @@ def load_files(path: Path) -> Dict[Path, List[str]]:
 
 def _load_file(path: Path, files: Dict[Path, List[str]]):
     try:
-        files[path] = path.lines("shift_jis_2004")
+        files[path] = path.lines("shift-jis-2004")
     except UnicodeDecodeError:
         pass

@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from typing import IO
+from io import StringIO
 
 from jubeatools.song import Chart, Song
 
 
 @dataclass
 class JubeatFile:
-    contents: IO
+    contents: StringIO
 
 
 @dataclass

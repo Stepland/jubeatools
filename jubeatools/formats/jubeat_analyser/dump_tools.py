@@ -8,14 +8,18 @@ from itertools import chain
 from typing import Callable, Dict, Iterator, List, Mapping, Optional, Union
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
+from path import Path
 from sortedcontainers import SortedDict, SortedKeyList
 
+from jubeatools.formats.filetypes import ChartFile
+from jubeatools.formats.typing import Dumper
 from jubeatools.song import (
     BeatsTime,
     Chart,
     LongNote,
     Metadata,
     NotePosition,
+    Song,
     TapNote,
     Timing,
 )
@@ -131,7 +135,7 @@ class JubeatAnalyserDumpedSection(ABC):
             yield f"*{symbol}:{decimal_time:.6f}"
 
     @abstractmethod
-    def _dump_notes(self, circle_free: bool = False,) -> Iterator[str]:
+    def _dump_notes(self, circle_free: bool) -> Iterator[str]:
         ...
 
 
@@ -159,10 +163,10 @@ def create_sections_from_chart(
         beat = BeatsTime(4) * i
         sections.add_key(beat)
 
-    header = sections[0].commands
+    header = sections[BeatsTime(0)].commands
     header["o"] = int(timing.beat_zero_offset * 1000)
     header["lev"] = int(chart.level)
-    header["dif"] = DIFFICULTIES.get(difficulty, 1)
+    header["dif"] = DIFFICULTIES.get(difficulty, 3)
     if metadata.audio:
         header["m"] = metadata.audio
     if metadata.title:
@@ -209,3 +213,36 @@ def create_sections_from_chart(
         )
 
     return sections
+
+
+def jubeat_analyser_file_dumper(
+    internal_dumper: Callable[[Song, bool], List[ChartFile]]
+) -> Dumper:
+    """Factory function to create a jubeat analyser file dumper from the internal dumper"""
+
+    def dumper(
+        song: Song, path: Path, *, circle_free: bool = False
+    ) -> Dict[Path, bytes]:
+        files = internal_dumper(song, circle_free)
+        res = {}
+        if path.isdir():
+            name_base = song.metadata.title
+            folder = path
+        else:
+            name_base = path.stem
+            folder = path.parent
+
+        for chartfile in files:
+            difficulty = DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty)
+            filename = f"{name_base} {difficulty}.txt"
+            i = 0
+            while folder / filename in res:
+                i += 1
+                filename = f"{name_base} {difficulty}-{i}.txt"
+            res[folder / filename] = chartfile.contents.getvalue().encode(
+                "shift-jis-2004"
+            )
+
+        return res
+
+    return dumper

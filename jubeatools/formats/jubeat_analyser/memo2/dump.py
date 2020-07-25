@@ -43,6 +43,7 @@ from ..dump_tools import (
     SortedDefaultDict,
     create_sections_from_chart,
     fraction_to_decimal,
+    jubeat_analyser_file_dumper,
 )
 from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
@@ -327,8 +328,8 @@ def _dump_memo2_chart(
     return file
 
 
-def _dump_memo2_internal(song: Song, circle_free: bool = False) -> List[JubeatFile]:
-    files: List[JubeatFile] = []
+def _dump_memo2_internal(song: Song, circle_free: bool = False) -> List[ChartFile]:
+    files: List[ChartFile] = []
     for difficulty, chart in song.charts.items():
         contents = _dump_memo2_chart(
             difficulty,
@@ -342,5 +343,4 @@ def _dump_memo2_internal(song: Song, circle_free: bool = False) -> List[JubeatFi
     return files
 
 
-def dump_memo2(song: Song, circle_free: bool, folder: Path, name_pattern: str = None):
-    ...
+dump_memo2 = jubeat_analyser_file_dumper(_dump_memo2_internal)

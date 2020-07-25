@@ -30,7 +30,7 @@ def test_many_notes(notes):
         level=0, timing=timing, notes=sorted(notes, key=lambda n: (n.time, n.position))
     )
     metadata = Metadata("", "", "", "")
-    string_io = _dump_memo_chart("", chart, metadata, timing)
+    string_io = _dump_memo_chart("", chart, metadata, timing, False)
     chart = string_io.getvalue()
     parser = MemoParser()
     for line in chart.split("\n"):

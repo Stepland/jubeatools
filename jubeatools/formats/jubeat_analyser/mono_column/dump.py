@@ -37,6 +37,7 @@ from ..dump_tools import (
     SortedDefaultDict,
     create_sections_from_chart,
     fraction_to_decimal,
+    jubeat_analyser_file_dumper,
 )
 from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
@@ -174,10 +175,8 @@ def _dump_mono_column_chart(
     return file
 
 
-def _dump_mono_column_internal(
-    song: Song, circle_free: bool = False
-) -> List[JubeatFile]:
-    files = []
+def _dump_mono_column_internal(song: Song, circle_free: bool) -> List[ChartFile]:
+    files: List[ChartFile] = []
     for difficulty, chart in song.charts.items():
         contents = _dump_mono_column_chart(
             difficulty,
@@ -191,8 +190,4 @@ def _dump_mono_column_internal(
     return files
 
 
-def dump_mono_column(
-    song: Song, circle_free: bool, folder: Path, name_pattern: str = None
-):
-    if not folder.isdir():
-        raise ValueError(f"{folder} is not a directory")
+dump_mono_column = jubeat_analyser_file_dumper(_dump_mono_column_internal)

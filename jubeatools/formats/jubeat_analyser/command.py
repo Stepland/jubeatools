@@ -11,7 +11,7 @@ Known simple commands :
 Known hash commands :
   - #memo             # youbeat-like format but a bar division always means a 1/4 note (amongst other quirks)
   - #memo1            # youbeat-like but without bpm changes in the bar
-  - #memo2            # youbeat-like with memo symbols
+  - #memo2            # youbeat-like but double-width
   - #boogie           # youbeat-like
   - #pw=<int>         # number of panels horizontally (4 by default)
   - #ph=<int>         # number of panels vertically (4 by default)
