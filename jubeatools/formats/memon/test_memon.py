@@ -18,11 +18,11 @@ from . import (
 
 
 def dump_and_load(expected_song, dump_function, load_function):
-    files = dump_function(expected_song)
-    assert len(files) == 1
-    filename, str_io = list(files.items())[0]
-    with tempfile.NamedTemporaryFile(mode="w+") as file:
-        file.write(str_io.getvalue())
+    with tempfile.NamedTemporaryFile(mode="wb") as file:
+        files = dump_function(expected_song, Path(file.name))
+        assert len(files) == 1
+        filename, contents = list(files.items())[0]
+        file.write(contents)
         file.seek(0)
         actual_song = load_function(file.name)
 
