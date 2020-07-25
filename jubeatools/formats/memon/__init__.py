@@ -247,28 +247,39 @@ def _long_note_tail_value_v0(note: LongNote) -> int:
             f"memon cannot represent a long note with its tail starting ({dx}, {dy}) away from the note"
         ) from None
 
+def _get_timing(song: Song) -> Timing:
+    if song.global_timing is not None:
+        return song.global_timing
+    else:
+        return next(
+            chart.timing
+            for chart in song.charts.values()
+            if chart is not None
+        )
 
 def _raise_if_unfit_for_v0(song: Song, version: str) -> None:
 
     """Raises an exception if the Song object is ill-formed or contains information
-    that cannot be represented in a memon v0.x.x file (includes legacy)"""
+    that cannot be represented in a memon v0.x.y file (includes legacy)"""
 
-    if any(chart.timing is not None for chart in song.charts.values()):
+    if len(set(chart.timing for chart in song.charts.values() if chart is not None)) > 1:
         raise ValueError(
             f"memon:{version} cannot represent a song with per-chart timing"
         )
+    
+    if song.global_timing is None and all(chart.timing is None for chart in song.charts.values()):
+        raise ValueError("The song has no timing information")
 
-    if song.global_timing is None:
-        raise ValueError("The song has no global timing information")
+    timing = _get_timing(song)
 
-    number_of_timing_events = len(song.global_timing.events)
+    number_of_timing_events = len(timing.events)
     if number_of_timing_events != 1:
         if number_of_timing_events == 0:
             raise ValueError("The song has no BPM")
         else:
             raise ValueError(f"memon:{version} does not handle BPM changes")
 
-    event = song.global_timing.events[0]
+    event = timing.events[0]
     if event.BPM <= 0:
         raise ValueError(f"memon:{version} only accepts strictly positive BPMs")
 
@@ -320,9 +331,11 @@ def _dump_memon_note_v0(
     return memon_note
 
 
+
 def dump_memon_legacy(song: Song, path: Path) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "legacy")
+    timing = _get_timing(song)
 
     memon = {
         "metadata": {
@@ -330,8 +343,8 @@ def dump_memon_legacy(song: Song, path: Path) -> Dict[Path, bytes]:
             "artist": song.metadata.artist,
             "music path": str(song.metadata.audio),
             "jacket path": str(song.metadata.cover),
-            "BPM": song.global_timing.events[0].BPM,
-            "offset": -song.global_timing.beat_zero_offset,
+            "BPM": timing.events[0].BPM,
+            "offset": -timing.beat_zero_offset,
         },
         "data": [],
     }
@@ -361,7 +374,8 @@ def dump_memon_legacy(song: Song, path: Path) -> Dict[Path, bytes]:
 
 def dump_memon_0_1_0(song: Song, path: Path) -> Dict[Path, bytes]:
 
-    _raise_if_unfit_for_v0(song, "legacy")
+    _raise_if_unfit_for_v0(song, "v0.1.0")
+    timing= _get_timing(song)
 
     memon = {
         "version": "0.1.0",
@@ -370,8 +384,8 @@ def dump_memon_0_1_0(song: Song, path: Path) -> Dict[Path, bytes]:
             "artist": song.metadata.artist,
             "music path": str(song.metadata.audio),
             "album cover path": str(song.metadata.cover),
-            "BPM": song.global_timing.events[0].BPM,
-            "offset": -song.global_timing.beat_zero_offset,
+            "BPM": timing.events[0].BPM,
+            "offset": -timing.beat_zero_offset,
         },
         "data": dict(),
     }
@@ -396,7 +410,8 @@ def dump_memon_0_1_0(song: Song, path: Path) -> Dict[Path, bytes]:
 
 def dump_memon_0_2_0(song: Song, path: Path) -> Dict[Path, bytes]:
 
-    _raise_if_unfit_for_v0(song, "legacy")
+    _raise_if_unfit_for_v0(song, "v0.2.0")
+    timing = _get_timing(song)
 
     memon = {
         "version": "0.2.0",
@@ -405,8 +420,8 @@ def dump_memon_0_2_0(song: Song, path: Path) -> Dict[Path, bytes]:
             "artist": song.metadata.artist,
             "music path": str(song.metadata.audio),
             "album cover path": str(song.metadata.cover),
-            "BPM": song.global_timing.events[0].BPM,
-            "offset": -song.global_timing.beat_zero_offset,
+            "BPM": timing.events[0].BPM,
+            "offset": -timing.beat_zero_offset,
         },
         "data": {},
     }

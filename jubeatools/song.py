@@ -123,7 +123,7 @@ class LongNote:
             yield position
 
 
-@dataclass
+@dataclass(frozen=True)
 class BPMEvent:
     time: BeatsTime
     BPM: Decimal
@@ -133,6 +133,12 @@ class BPMEvent:
 class Timing:
     events: List[BPMEvent]
     beat_zero_offset: SecondsTime
+
+    def __hash__(self):
+        return hash((
+            tuple(self.events),
+            self.beat_zero_offset,
+        ))
 
 
 @dataclass

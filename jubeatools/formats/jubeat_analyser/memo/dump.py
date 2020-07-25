@@ -46,7 +46,7 @@ from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 AnyNote = Union[TapNote, LongNote, LongNoteEnd]
 
-EMPTY_BEAT_SYMBOL = "－"  # U+0FF0D : FULLWIDTH HYPHEN-MINUS
+EMPTY_BEAT_SYMBOL = '−'  # U+02212 : MINUS SIGN
 EMPTY_POSITION_SYMBOL = "□"  # U+025A1 : WHITE SQUARE
 
 
@@ -252,7 +252,7 @@ def _dump_memo_chart(
     file.write(f"// Converted using jubeatools {__version__}\n")
     file.write(f"// https://github.com/Stepland/jubeatools\n\n")
     for _, section in sections.items():
-        file.write(section.render(circle_free) + "\n")
+        file.write(section.render(circle_free) + "\n\n")
 
     return file
 

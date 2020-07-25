@@ -1,9 +1,8 @@
 """Command Line Interface"""
-
-from pathlib import Path
 from typing import Optional
 
 import click
+from path import Path
 
 from jubeatools.formats import DUMPERS, LOADERS
 from jubeatools.formats.enum import JUBEAT_ANALYSER_FORMATS
@@ -27,8 +26,8 @@ from jubeatools.formats.guess import guess_format
 )
 def convert(src, dst, output_format, **kwargs):
     """Convert SRC to DST using the format specified by -f"""
-
     input_format = guess_format(Path(src))
+    click.echo(f"Detected input file format : {input_format}")
 
     try:
         loader = LOADERS[input_format]
@@ -40,7 +39,7 @@ def convert(src, dst, output_format, **kwargs):
     except KeyError:
         raise ValueError(f"Unsupported output format : {input_format}")
 
-    song = loader(src)
+    song = loader(Path(src))
 
     extra_args = {}
     if output_format in JUBEAT_ANALYSER_FORMATS:
@@ -49,7 +48,6 @@ def convert(src, dst, output_format, **kwargs):
     files = dumper(song, Path(dst), **extra_args)
 
     for path, contents in files.items():
-        path.makedirs_p()
         with path.open("wb") as f:
             f.write(contents)
 

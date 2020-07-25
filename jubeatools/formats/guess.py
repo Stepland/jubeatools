@@ -15,7 +15,7 @@ def guess_format(path: Path) -> Format:
     try:
         with path.open() as f:
             obj = json.load(f)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         pass
     else:
         return guess_memon_version(obj)
