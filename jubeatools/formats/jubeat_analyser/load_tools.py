@@ -3,7 +3,7 @@ import re
 import warnings
 from collections import Counter
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from decimal import Decimal
 from itertools import product, zip_longest
 from typing import Dict, Iterator, List, Optional, Set, Tuple
@@ -226,7 +226,7 @@ def pick_correct_long_note_candidates(
 
 
 def note_distance(a: NotePosition, b: NotePosition) -> float:
-    return abs(complex(*a.as_tuple()) - complex(*b.as_tuple()))
+    return abs(complex(*astuple(a)) - complex(*astuple(b)))
 
 
 def long_note_solution_heuristic(

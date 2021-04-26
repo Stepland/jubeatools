@@ -2,7 +2,7 @@ import re
 import warnings
 from collections import Counter
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from decimal import Decimal
 from enum import Enum
 from functools import reduce
@@ -200,7 +200,7 @@ class MonoColumnParser(JubeatAnalyserParser):
 
             # 1/3 : look for ends to unfinished long notes
             for pos, unfinished_long in unfinished_longs.items():
-                x, y = pos.as_tuple()
+                x, y = astuple(pos)
                 symbol = bloc[y][x]
                 if self.circle_free:
                     if symbol in CIRCLE_FREE_SYMBOLS:

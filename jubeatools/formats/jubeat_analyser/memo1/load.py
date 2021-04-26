@@ -1,7 +1,7 @@
 import warnings
 from collections import ChainMap
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from decimal import Decimal
 from functools import reduce
 from itertools import chain, product, zip_longest
@@ -214,7 +214,7 @@ class Memo1Parser(JubeatAnalyserParser):
 
             # 1/3 : look for ends to unfinished long notes
             for pos, unfinished_long in unfinished_longs.items():
-                x, y = pos.as_tuple()
+                x, y = astuple(pos)
                 symbol = frame.position_part[y][x]
                 if self.circle_free and symbol in CIRCLE_FREE_SYMBOLS:
                     circled_symbol = CIRCLE_FREE_TO_NOTE_SYMBOL[symbol]

@@ -8,7 +8,7 @@ otherwise a decimal number of seconds is used
 """
 
 from collections import UserList, namedtuple
-from dataclasses import dataclass, field
+from dataclasses import astuple, dataclass, field
 from decimal import Decimal
 from fractions import Fraction
 from functools import wraps
@@ -45,21 +45,17 @@ def convert_other(f):
     return wrapped
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class NotePosition:
     x: int
     y: int
 
     def __iter__(self):
-        yield self.x
-        yield self.y
+        yield from astuple(self)
 
     @property
     def index(self):
         return self.x + 4 * self.y
-
-    def as_tuple(self):
-        return (self.x, self.y)
 
     @classmethod
     def from_index(cls: Type["NotePosition"], index: int) -> "NotePosition":
@@ -67,10 +63,6 @@ class NotePosition:
             raise ValueError(f"Note position index out of range : {index}")
 
         return cls(x=index % 4, y=index // 4)
-
-    @convert_other
-    def __lt__(self, other):
-        return self.as_tuple() < other.as_tuple()
 
     @convert_other
     def __add__(self, other):
@@ -81,13 +73,13 @@ class NotePosition:
         return NotePosition(self.x - other.x, self.y - other.y)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, unsafe_hash=True)
 class TapNote:
     time: BeatsTime
     position: NotePosition
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, unsafe_hash=True)
 class LongNote:
     time: BeatsTime
     position: NotePosition
@@ -95,9 +87,6 @@ class LongNote:
     # tail_tip starting position as absolute position on the
     # playfield
     tail_tip: NotePosition
-
-    def __hash__(self):
-        return hash((self.time, self.position))
 
     def tail_is_straight(self) -> bool:
         return (self.position.x == self.tail_tip.x) or (
@@ -107,7 +96,7 @@ class LongNote:
     def tail_direction(self) -> NotePosition:
         if not self.tail_is_straight():
             raise ValueError("Can't get tail direction when it's not straight")
-        x, y = (self.tail_tip - self.position).as_tuple()
+        x, y = astuple(self.tail_tip - self.position)
         if x == 0:
             y //= abs(y)
         else:
@@ -129,16 +118,10 @@ class BPMEvent:
     BPM: Decimal
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Timing:
     events: List[BPMEvent]
     beat_zero_offset: SecondsTime
-
-    def __hash__(self):
-        return hash((
-            tuple(self.events),
-            self.beat_zero_offset,
-        ))
 
 
 @dataclass
@@ -161,6 +144,7 @@ class Metadata:
     audio: Path
     cover: Path
     preview: Optional[Preview] = None
+    preview_file: Optional[Path] = None
 
 
 @dataclass
