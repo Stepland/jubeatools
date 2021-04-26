@@ -1,6 +1,7 @@
 """
 Module containing all the load/dump code for all file formats
 """
+
 from typing import IO, Any, Callable, Dict
 
 from path import Path

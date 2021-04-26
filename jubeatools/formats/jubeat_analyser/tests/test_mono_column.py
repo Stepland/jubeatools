@@ -16,7 +16,8 @@ def compare_chart_notes(chart: str, expected: Iterable[Union[TapNote, LongNote]]
 
 
 def test_simple_section():
-    chart = """
+    chart = \
+        """
         ①□□□
         □⑤□□
         □□⑨□
@@ -24,13 +25,15 @@ def test_simple_section():
         -------
         """
     expected = [
-        TapNote(time=BeatsTime(i), position=NotePosition(i, i)) for i in range(4)
+        TapNote(time=BeatsTime(i), position=NotePosition(i, i))
+        for i in range(4)
     ]
     compare_chart_notes(chart, expected)
 
 
 def test_compound_section():
-    chart = """
+    chart = \
+        """
         □①①□
         □⑩⑪□
         ④⑧⑨⑤
@@ -69,7 +72,8 @@ def test_compound_section():
 
 
 def test_symbol_definition():
-    chart = """
+    chart = \
+        """
         *Ａ:2 //⑨と同タイミング
         *Ｂ:2.125
         *Ｃ:2.25 //⑩と同じ
@@ -112,7 +116,8 @@ def test_symbol_definition():
 
 
 def test_half_width_symbols():
-    chart = """
+    chart = \
+        """
         b=7
         *⑲:4.5
         *21:5
@@ -156,7 +161,8 @@ def test_half_width_symbols():
 
 
 def test_irregular_beats_per_frame_1():
-    chart = """
+    chart = \
+        """
         b=2.75
         ①□□□
         □□□□
@@ -189,7 +195,8 @@ def test_irregular_beats_per_frame_1():
 
 
 def test_irregular_beats_per_frame_2():
-    chart = """
+    chart = \
+        """
         b=1
         ①□□□
         □□□□
@@ -223,7 +230,8 @@ def test_irregular_beats_per_frame_2():
 
 
 def test_long_notes():
-    chart = """
+    chart = \
+        """
         #holdbyarrow=1
         ①□□＜
         □□□□
@@ -248,7 +256,8 @@ def test_long_notes():
 
 
 def test_long_notes_ambiguous_case():
-    chart = """
+    chart = \
+        """
         #holdbyarrow=1
         ①①＜＜
         □□□□
@@ -271,7 +280,8 @@ def test_long_notes_ambiguous_case():
 
 @pytest.mark.filterwarnings("error")
 def test_long_notes_simple_solution_no_warning():
-    chart = """
+    chart = \
+        """
         #holdbyarrow=1
         □□□□
         ＞①①＜
@@ -292,7 +302,8 @@ def test_long_notes_simple_solution_no_warning():
 
 
 def test_long_notes_complex_case():
-    chart = """
+    chart = \
+        """
         #holdbyarrow=1
         □□□□
         □□∨□
@@ -313,7 +324,8 @@ def test_long_notes_complex_case():
 
 
 def test_circle_free():
-    chart = """
+    chart = \
+        """
         #holdbyarrow=1
         #circlefree=1
         □□□□

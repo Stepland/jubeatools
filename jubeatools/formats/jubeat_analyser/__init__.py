@@ -1,9 +1,9 @@
 """
-Formats read by jubeat analyser
+This module contains code for the different formats read by jubeat analyser
 
-memo is a vague term refering to several legacy formats.
+"memo" is a vague term that refers to several legacy formats.
 They were originally derived from the (somewhat) human-readable format choosen
-by websites storing official jubeat charts in text form as a memory aid.
+by websites gathering official jubeat charts in text form as a memory aid.
 
 The machine-readable variants are partially documented (in japanese)
 on these pages :
