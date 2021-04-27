@@ -140,7 +140,8 @@ def split_double_byte_line(line: str) -> List[str]:
 
 
 def decimal_to_beats(decimal_time: Decimal) -> BeatsTime:
-    return BeatsTime(decimal_time).limit_denominator(240)
+    nearest_240th = round(decimal_time * 240)
+    return BeatsTime(nearest_240th, 240)
 
 
 @dataclass(frozen=True)
