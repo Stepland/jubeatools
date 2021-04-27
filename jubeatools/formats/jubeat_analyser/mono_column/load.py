@@ -87,8 +87,6 @@ def is_separator(line: str) -> bool:
     return bool(SEPARATOR.match(line))
 
 
-DIFFICULTIES = {1: "BSC", 2: "ADV", 3: "EXT"}
-
 SYMBOL_TO_DECIMAL_TIME = {
     symbol: Decimal("0.25") * index for index, symbol in enumerate(NOTE_SYMBOLS)
 }
@@ -128,14 +126,18 @@ class MonoColumnParser(JubeatAnalyserParser):
         self.sections: List[MonoColumnLoadedSection] = []
 
     def do_memo(self):
-        raise ValueError("This is not a mono-column file")
+        raise ValueError(
+            "This file indicates it's using another jubeat analyser format "
+            "than the one the currently selected parser is designed for"
+        )
 
     do_boogie = do_memo2 = do_memo1 = do_memo
 
     def do_bpp(self, value):
         if self.sections:
             raise ValueError(
-                "jubeatools does not handle changing the bytes per panel value halfway"
+                "This file apparently changes its bytes per panel value (#bpp) "
+                "halfway through the chart, jubeatools does not handle that"
             )
         else:
             self._do_bpp(value)

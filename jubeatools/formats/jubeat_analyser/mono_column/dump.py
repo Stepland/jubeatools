@@ -29,7 +29,6 @@ from ..dump_tools import (
     BEATS_TIME_TO_SYMBOL,
     COMMAND_ORDER,
     DEFAULT_EXTRA_SYMBOLS,
-    DIFFICULTIES,
     DIRECTION_TO_ARROW,
     DIRECTION_TO_LINE,
     JubeatAnalyserDumpedSection,
