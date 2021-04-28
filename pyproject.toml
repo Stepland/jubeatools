@@ -8,14 +8,14 @@ repository = "https://github.com/Stepland/jubeatools"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-multidict = "^4.7.6"
+multidict = "^5.1.0"
 click = "^7.1.2"
-path = "^14.0.1"
+path = "^15.1.2"
 simplejson = "^3.17.0"
 marshmallow = "^3.6.0"
 parsimonious = "^0.8.1"
 more-itertools = "^8.4.0"
-sortedcontainers = "^2.2.2"
+sortedcontainers = "^2.3.0"
 python-constraint = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
@@ -23,7 +23,7 @@ pytest = "^5.2"
 rope = "^0.17.0"
 black = "^19.10b0"
 hypothesis = "^5.16.3"
-mypy = "^0.782"
+mypy = "^0.812"
 isort = "^4.3.21"
 
 [tool.poetry.scripts]
