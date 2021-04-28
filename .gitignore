@@ -2,4 +2,5 @@
 .vscode
 .hypothesis
 .pytest_cache
+.mypy_cache
 dist

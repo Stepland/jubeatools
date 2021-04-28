@@ -10,7 +10,7 @@ from math import ceil
 from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from more_itertools import chunked, collapse, intersperse, mark_ends, windowed
-from path import Path
+from pathlib import Path
 from sortedcontainers import SortedKeyList
 
 from jubeatools import __version__
@@ -38,7 +38,6 @@ from ..dump_tools import (
     DIRECTION_TO_ARROW,
     DIRECTION_TO_LINE,
     NOTE_TO_CIRCLE_FREE_SYMBOL,
-    JubeatAnalyserDumpedSection,
     LongNoteEnd,
     SortedDefaultDict,
     create_sections_from_chart,
@@ -61,8 +60,9 @@ class Frame:
     def dump(self) -> Iterator[str]:
         # Check that bars are contiguous
         for a, b in windowed(sorted(self.bars), 2):
-            if b is not None and b - a != 1:
-                raise ValueError("Frame has discontinuous bars")
+            if a is not None and b is not None:
+                if b - a != 1:
+                    raise ValueError("Frame has discontinuous bars")
 
         for pos, bar in zip_longest(self.dump_positions(), self.dump_bars()):
             if bar is None:
@@ -92,6 +92,13 @@ class StopEvent:
 
 
 @dataclass
+class BarEvent:
+    note: Optional[str] = None
+    bpms: List[BPMEvent] = field(default_factory=list)
+    stops: List[StopEvent] = field(default_factory=list)
+
+
+@dataclass
 class Memo2Section:
     """A 4-beat-long group of notes"""
 
@@ -115,7 +122,7 @@ class Memo2Section:
             events_by_bar[bar_index].append(event)
 
         # Pre-render timing bars
-        bars: Dict[int, List[str]] = defaultdict(dict)
+        bars: Dict[int, List[str]] = defaultdict(list)
         chosen_symbols: Dict[BeatsTime, str] = {}
         symbols_iterator = iter(NOTE_SYMBOLS)
         for bar_index in range(4):
@@ -127,9 +134,8 @@ class Memo2Section:
             )
             if bar_length < 3:
                 bar_length = 4
-            bar_dict: Dict[int, List[Union[str, BPMEvent, StopEvent]]] = defaultdict(
-                list
-            )
+
+            bar_dict: Dict[int, BarEvent] = defaultdict(BarEvent)
             for note in notes:
                 time_in_section = note.time % BeatsTime(4)
                 time_in_bar = note.time % Fraction(1)
@@ -139,34 +145,28 @@ class Memo2Section:
                 if time_index not in bar_dict:
                     symbol = next(symbols_iterator)
                     chosen_symbols[time_in_section] = symbol
-                    bar_dict[time_index].append(symbol)
+                    bar_dict[time_index].note = symbol
+
             for event in events:
                 time_in_bar = event.time % Fraction(1)
                 time_index = time_in_bar.numerator * (
                     bar_length / time_in_bar.denominator
                 )
-                bar_dict[time_index].append(event)
+                if isinstance(event, StopEvent):
+                    bar_dict[time_index].stops.append(event)
+                elif isinstance(event, BPMEvent):
+                    bar_dict[time_index].bpms.append(event)
+
             bar = []
             for i in range(bar_length):
-                events_and_note = bar_dict.get(i, [])
-                stops = list(
-                    filter(lambda e: isinstance(e, StopEvent), events_and_note)
-                )
-                bpms = list(filter(lambda e: isinstance(e, BPMEvent), events_and_note))
-                notes = list(filter(lambda e: isinstance(e, str), events_and_note))
-                assert len(notes) <= 1
-                for stop in stops:
+                bar_event = bar_dict.get(i, BarEvent())
+                for stop in bar_event.stops:
                     bar.append(f"[{int(stop.duration * 1000)}]")
 
-                for bpm in bpms:
+                for bpm in bar_event.bpms:
                     bar.append(f"({bpm.BPM})")
 
-                if notes:
-                    note = notes[0]
-                else:
-                    note = EMPTY_BEAT_SYMBOL
-
-                bar.append(note)
+                bar.append(bar_event.note or EMPTY_BEAT_SYMBOL)
 
             bars[bar_index] = bar
 
@@ -331,11 +331,13 @@ def _dump_memo2_chart(
 def _dump_memo2_internal(song: Song, circle_free: bool = False) -> List[ChartFile]:
     files: List[ChartFile] = []
     for difficulty, chart in song.charts.items():
+        timing = chart.timing or song.global_timing
+        assert timing is not None
         contents = _dump_memo2_chart(
             difficulty,
             chart,
             song.metadata,
-            chart.timing or song.global_timing,
+            timing,
             circle_free,
         )
         files.append(ChartFile(contents, song, difficulty, chart))

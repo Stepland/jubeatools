@@ -9,7 +9,7 @@ from itertools import chain
 from typing import Dict, Iterator, List, Mapping, Optional, Tuple
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
-from path import Path
+from pathlib import Path
 from sortedcontainers import SortedKeyList
 
 from jubeatools import __version__
@@ -90,7 +90,7 @@ class MonoColumnDumpedSection(JubeatAnalyserDumpedSection):
                     frame = {}
                 time_in_section = note.time - self.current_beat
                 if circle_free:
-                    symbol = CIRCLE_FREE_SYMBOLS[time_in_section]
+                    symbol = CIRCLE_FREE_SYMBOLS[int(time_in_section)]
                 else:
                     symbol = self.symbols[time_in_section]
                 frame[note.position] = symbol
@@ -177,11 +177,13 @@ def _dump_mono_column_chart(
 def _dump_mono_column_internal(song: Song, circle_free: bool) -> List[ChartFile]:
     files: List[ChartFile] = []
     for difficulty, chart in song.charts.items():
+        timing = chart.timing or song.global_timing
+        assert timing is not None
         contents = _dump_mono_column_chart(
             difficulty,
             chart,
             song.metadata,
-            chart.timing or song.global_timing,
+            timing,
             circle_free,
         )
         files.append(ChartFile(contents, song, difficulty, chart))

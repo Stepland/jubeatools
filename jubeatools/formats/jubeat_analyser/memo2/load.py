@@ -10,7 +10,7 @@ from typing import Dict, Iterator, List, Mapping, Optional, Set, Tuple, Union
 import constraint
 from more_itertools import collapse, mark_ends
 from parsimonious import Grammar, NodeVisitor, ParseError
-from path import Path
+from pathlib import Path
 
 from jubeatools.song import (
     BeatsTime,
@@ -23,6 +23,7 @@ from jubeatools.song import (
     Song,
     TapNote,
     Timing,
+    Preview,
 )
 
 from ..command import is_command, parse_command
@@ -50,7 +51,7 @@ from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 
 @dataclass
-class Notes:
+class NoteCluster:
     string: str
 
     def dump(self) -> str:
@@ -73,7 +74,7 @@ class BPM:
         return f"({self.value})"
 
 
-Event = Union[Notes, Stop, BPM]
+Event = Union[NoteCluster, Stop, BPM]
 
 
 @dataclass
@@ -91,7 +92,6 @@ class RawMemo2ChartLine:
 @dataclass
 class Memo2ChartLine:
     """timing part only contains notes"""
-
     position: str
     timing: Optional[List[str]]
 
@@ -136,7 +136,7 @@ class Memo2ChartLineVisitor(NodeVisitor):
         self.time_part.append(BPM(Decimal(value.text)))
 
     def visit_notes(self, node, visited_children):
-        self.time_part.append(Notes(node.text))
+        self.time_part.append(NoteCluster(node.text))
 
     def generic_visit(self, node, visited_children):
         ...
@@ -229,11 +229,12 @@ class Memo2Parser(JubeatAnalyserParser):
             raise SyntaxError(
                 f"Invalid chart line for #bpp={self.bytes_per_panel} : {raw_line}"
             )
+        
         if raw_line.timing is not None and self.bytes_per_panel == 2:
             if any(
-                len(event.string.encode("shift-jis-2004")) % 2 != 0
-                for event in raw_line.timing
-                if isinstance(event, Notes)
+                len(e.string.encode("shift-jis-2004")) % 2 != 0
+                for e in raw_line.timing
+                if isinstance(e, NoteCluster)
             ):
                 raise SyntaxError(f"Invalid chart line for #bpp=2 : {raw_line}")
 
@@ -241,12 +242,12 @@ class Memo2Parser(JubeatAnalyserParser):
             line = Memo2ChartLine(raw_line.position, None)
         else:
             # split notes
-            bar = []
-            for event in raw_line.timing:
-                if isinstance(event, Notes):
-                    bar.extend(self._split_chart_line(event.string))
+            bar: List[Union[str, Stop, BPM]] = []
+            for raw_event in raw_line.timing:
+                if isinstance(raw_event, NoteCluster):
+                    bar.extend(self._split_chart_line(raw_event.string))
                 else:
-                    bar.append(event)
+                    bar.append(raw_event)
             # extract timing info
             bar_length = sum(1 for e in bar if isinstance(e, str))
             symbol_duration = BeatsTime(1, bar_length)
@@ -286,8 +287,8 @@ class Memo2Parser(JubeatAnalyserParser):
         else:
             return list(line)
 
-    def _frames_duration(self) -> Decimal:
-        return sum(frame.duration for frame in self.frames)
+    def _frames_duration(self) -> BeatsTime:
+        return sum((frame.duration for frame in self.frames), start=BeatsTime(0))
 
     def _push_frame(self):
         position_part = [
@@ -336,13 +337,13 @@ class Memo2Parser(JubeatAnalyserParser):
 
     def _iter_frames(
         self,
-    ) -> Iterator[Tuple[Mapping[str, BeatsTime], Memo2Frame, BeatsTime]]:
+    ) -> Iterator[Tuple[Mapping[str, BeatsTime], Memo2Frame]]:
         """iterate over tuples of (currently_defined_symbols, frame)"""
-        local_symbols: Dict[str, Decimal] = {}
+        local_symbols = {}
         frame_starting_beat = BeatsTime(0)
         for i, frame in enumerate(self.frames):
             if frame.timing_part:
-                frame_starting_beat = sum(f.duration for f in self.frames[:i])
+                frame_starting_beat = sum((f.duration for f in self.frames[:i]), start=BeatsTime(0))
                 local_symbols = {
                     symbol: frame_starting_beat
                     + bar_index
@@ -445,8 +446,7 @@ def _load_memo2_file(lines: List[str]) -> Song:
         cover=parser.jacket,
     )
     if parser.preview_start is not None:
-        metadata.preview_start = SecondsTime(parser.preview_start) / 1000
-        metadata.preview_length = SecondsTime(10)
+        metadata.preview = Preview(start=SecondsTime(parser.preview_start) / 1000,length=SecondsTime(10))
 
     timing = Timing(
         events=parser.timing_events, beat_zero_offset=SecondsTime(parser.offset or 0) / 1000

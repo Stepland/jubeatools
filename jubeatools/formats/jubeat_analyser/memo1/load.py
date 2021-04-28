@@ -10,7 +10,7 @@ from typing import Dict, Iterator, List, Mapping, Optional, Set, Tuple, Union
 import constraint
 from more_itertools import collapse, mark_ends
 from parsimonious import Grammar, NodeVisitor, ParseError
-from path import Path
+from pathlib import Path
 
 from jubeatools.song import (
     BeatsTime,
@@ -22,6 +22,7 @@ from jubeatools.song import (
     Song,
     TapNote,
     Timing,
+    Preview
 )
 
 from ..command import is_command, parse_command
@@ -112,7 +113,7 @@ class Memo1Parser(JubeatAnalyserParser):
             return list(line)
 
     def _frames_duration(self) -> Decimal:
-        return sum(frame.duration for frame in self.frames)
+        return sum((frame.duration for frame in self.frames), start=Decimal(0))
 
     def _push_frame(self):
         position_part = [
@@ -184,13 +185,13 @@ class Memo1Parser(JubeatAnalyserParser):
     ]:
         """iterate over tuples of
         currently_defined_symbols, frame, section_starting_beat, section"""
-        local_symbols: Dict[str, Decimal] = {}
+        local_symbols = {}
         section_starting_beat = Decimal(0)
         for section in self.sections:
             frame_starting_beat = Decimal(0)
             for i, frame in enumerate(section.frames):
                 if frame.timing_part:
-                    frame_starting_beat = sum(f.duration for f in section.frames[:i])
+                    frame_starting_beat = sum((f.duration for f in section.frames[:i]), start=Decimal(0))
                     local_symbols = {
                         symbol: BeatsTime(symbol_index, len(bar))
                         + bar_index
@@ -309,8 +310,10 @@ def _load_memo1_file(lines: List[str]) -> Song:
         cover=parser.jacket,
     )
     if parser.preview_start is not None:
-        metadata.preview_start = SecondsTime(parser.preview_start) / 1000
-        metadata.preview_length = SecondsTime(10)
+        metadata.preview = Preview(
+            start=SecondsTime(parser.preview_start) / 1000,
+            length=SecondsTime(10)
+        )
 
     timing = Timing(
         events=parser.timing_events, beat_zero_offset=SecondsTime(parser.offset) / 1000

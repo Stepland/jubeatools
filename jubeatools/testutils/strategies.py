@@ -231,7 +231,7 @@ def song(
             ),
         )
     diffs = draw(st.sets(diff_name_strat, min_size=1, max_size=10))
-    charts = MultiDict()
+    charts: MultiDict[Chart] = MultiDict()
     for diff_name in diffs:
         chart_timing_strat = st.none()
         if TimingOption.PER_CHART in timing_options:

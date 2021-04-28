@@ -5,10 +5,10 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from fractions import Fraction
 from itertools import chain
-from typing import Callable, Dict, Iterator, List, Mapping, Optional, Union
+from typing import Callable, Dict, Iterator, List, Mapping, Optional, Union, TypeVar
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
-from path import Path
+from pathlib import Path
 from sortedcontainers import SortedDict, SortedKeyList
 
 from jubeatools.formats.filetypes import ChartFile
@@ -111,15 +111,19 @@ class SortedDefaultDict(SortedDict):
         return value
 
 
+# Here we split dataclass and ABC stuff since mypy curently can't handle both
+# at once on a single class definition
 @dataclass
-class JubeatAnalyserDumpedSection(ABC):
+class _JubeatAnalyerDumpedSection:
     current_beat: BeatsTime
-    length: Decimal = 4
+    length: Decimal = Decimal(4)
     commands: Dict[str, Optional[str]] = field(default_factory=dict)
     symbol_definitions: Dict[BeatsTime, str] = field(default_factory=dict)
     symbols: Dict[BeatsTime, str] = field(default_factory=dict)
     notes: List[Union[TapNote, LongNote, LongNoteEnd]] = field(default_factory=list)
 
+
+class JubeatAnalyserDumpedSection(_JubeatAnalyerDumpedSection, ABC):
     def _dump_commands(self) -> Iterator[str]:
         keys = chain(COMMAND_ORDER, self.commands.keys() - set(COMMAND_ORDER))
         for key in keys:
@@ -139,14 +143,16 @@ class JubeatAnalyserDumpedSection(ABC):
         ...
 
 
+S = TypeVar('S', bound=JubeatAnalyserDumpedSection)
+
 def create_sections_from_chart(
-    section_factory: Callable[[BeatsTime], JubeatAnalyserDumpedSection],
+    section_factory: Callable[[BeatsTime], S],
     chart: Chart,
     difficulty: str,
     timing: Timing,
     metadata: Metadata,
     circle_free: bool,
-) -> Mapping[BeatsTime, JubeatAnalyserDumpedSection]:
+) -> Mapping[BeatsTime, S]:
     sections = SortedDefaultDict(section_factory)
 
     timing_events = sorted(timing.events, key=lambda e: e.time)
@@ -225,7 +231,7 @@ def jubeat_analyser_file_dumper(
     ) -> Dict[Path, bytes]:
         files = internal_dumper(song, circle_free)
         res = {}
-        if path.isdir():
+        if path.is_dir():
             name_format = song.metadata.title + " {difficulty}{dedup_index}.txt"
         else:
             name_format = "{base}{dedup_index}{ext}"
@@ -233,18 +239,18 @@ def jubeat_analyser_file_dumper(
         for chartfile in files:
             i = 0
             filepath = name_format.format(
-                base=path.stripext(),
+                base=path.parent / path.stem,
                 difficulty = DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty),
                 dedup_index = "" if i == 0 else f"-{i}",
-                ext=path.ext,
+                ext=path.suffix,
             )
             while filepath in res:
                 i += 1
                 filepath = name_format.format(
-                    base=path.stripext(),
+                    base=path.parent / path.stem,
                     difficulty = DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty),
                     dedup_index = "" if i == 0 else f"-{i}",
-                    ext=path.ext,
+                    ext=path.suffix,
                 )
 
             res[Path(filepath)] = chartfile.contents.getvalue().encode(

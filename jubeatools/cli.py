@@ -2,7 +2,7 @@
 from typing import Optional
 
 import click
-from path import Path
+from pathlib import Path
 
 from jubeatools.formats import DUMPERS, LOADERS
 from jubeatools.formats.enum import JUBEAT_ANALYSER_FORMATS

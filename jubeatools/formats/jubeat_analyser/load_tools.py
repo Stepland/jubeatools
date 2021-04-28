@@ -6,7 +6,7 @@ from copy import deepcopy
 from dataclasses import astuple, dataclass
 from decimal import Decimal
 from itertools import product, zip_longest
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Set, Tuple, AbstractSet
 
 import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
@@ -164,7 +164,7 @@ class UnfinishedLongNote:
 
 
 def find_long_note_candidates(
-    bloc: List[List[str]], note_symbols: Set[str], should_skip: Set[NotePosition]
+    bloc: List[List[str]], note_symbols: AbstractSet[str], should_skip: AbstractSet[NotePosition]
 ) -> Dict[NotePosition, Set[NotePosition]]:
     "Return a dict of arrow position to landing note candidates"
     arrow_to_note_candidates: Dict[NotePosition, Set[NotePosition]] = {}
@@ -178,7 +178,7 @@ def find_long_note_candidates(
 
         # at this point we are sure we have a long arrow
         # we need to check in its direction for note candidates
-        note_candidates: Set[Tuple[int, int]] = set()
+        note_candidates = set()
         𝛿pos = LONG_DIRECTION[symbol]
         candidate = NotePosition(x, y) + 𝛿pos
         while 0 <= candidate.x < 4 and 0 <= candidate.y < 4:

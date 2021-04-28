@@ -2,7 +2,7 @@ import tempfile
 
 import hypothesis.strategies as st
 from hypothesis import given
-from path import Path
+from pathlib import Path
 
 from jubeatools.testutils.strategies import NoteOption, TimingOption
 from jubeatools.testutils.strategies import song as song_strat

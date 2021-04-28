@@ -7,11 +7,11 @@ from decimal import Decimal
 from enum import Enum
 from functools import reduce
 from itertools import product
-from typing import Dict, Iterator, List, Set, Tuple
+from typing import Dict, Iterator, List, Set, Tuple, Union
 
 import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
-from path import Path
+from pathlib import Path
 
 from jubeatools.song import (
     BeatsTime,
@@ -24,7 +24,7 @@ from jubeatools.song import (
     Song,
     TapNote,
     Timing,
-    Union,
+    Preview,
 )
 
 from ..command import is_command, parse_command
@@ -296,8 +296,10 @@ def _load_mono_column_file(lines: List[str]) -> Song:
         cover=parser.jacket,
     )
     if parser.preview_start is not None:
-        metadata.preview_start = SecondsTime(parser.preview_start) / 1000
-        metadata.preview_length = SecondsTime(10)
+        metadata.preview = Preview(
+            start=SecondsTime(parser.preview_start) / 1000,
+            length=SecondsTime(10)
+        )
 
     timing = Timing(
         events=parser.timing_events, beat_zero_offset=SecondsTime(parser.offset) / 1000

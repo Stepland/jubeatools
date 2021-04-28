@@ -1,12 +1,8 @@
-from typing import Any, Dict, Protocol
+from typing import Any, Dict, Callable
 
-from path import Path
+from pathlib import Path
 
 from jubeatools.song import Song
 
 
-class Dumper(Protocol):
-    def __call__(
-        self, song: Song, path: Path, **kwargs: Dict[str, Any]
-    ) -> Dict[Path, bytes]:
-        ...
+Dumper = Callable[[Song, Path], Dict[Path, bytes]]

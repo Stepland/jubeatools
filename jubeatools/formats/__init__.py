@@ -4,7 +4,7 @@ Module containing all the load/dump code for all file formats
 
 from typing import IO, Any, Callable, Dict
 
-from path import Path
+from pathlib import Path
 
 from jubeatools.song import Song
 
@@ -41,7 +41,7 @@ LOADERS: Dict[Format, Callable[[Path], Song]] = {
     Format.MEMO_2: load_memo2,
 }
 
-DUMPERS: Dict[str, Dumper] = {
+DUMPERS: Dict[Format, Dumper] = {
     Format.MEMON_LEGACY: dump_memon_legacy,
     Format.MEMON_0_1_0: dump_memon_0_1_0,
     Format.MEMON_0_2_0: dump_memon_0_2_0,

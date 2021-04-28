@@ -2,13 +2,13 @@ import json
 import re
 from typing import Any, List
 
-from path import Path
+from pathlib import Path
 
 from .enum import Format
 
 
 def guess_format(path: Path) -> Format:
-    if path.isdir():
+    if path.is_dir():
         raise ValueError("Can't guess chart format for a folder")
 
     # The file is valid json => memon

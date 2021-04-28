@@ -15,7 +15,7 @@ from functools import wraps
 from typing import Iterator, List, Mapping, Optional, Type, Union
 
 from multidict import MultiDict
-from path import Path
+from pathlib import Path
 
 BeatsTime = Fraction
 SecondsTime = Decimal
@@ -164,7 +164,7 @@ class Song:
                 f"{self.metadata}\n"
                 f"{other.metadata}"
             )
-        charts = MultiDict()
+        charts: MultiDict[Chart] = MultiDict()
         charts.extend(self.charts)
         charts.extend(other.charts)
         if (

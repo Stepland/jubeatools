@@ -10,7 +10,7 @@ from math import ceil
 from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from more_itertools import chunked, collapse, intersperse, mark_ends, windowed
-from path import Path
+from pathlib import Path
 from sortedcontainers import SortedKeyList
 
 from jubeatools import __version__
@@ -58,8 +58,9 @@ class Frame:
     def dump(self, length: Decimal) -> Iterator[str]:
         # Check that bars are contiguous
         for a, b in windowed(sorted(self.bars), 2):
-            if b is not None and b - a != 1:
-                raise ValueError("Frame has discontinuous bars")
+            if a is not None and b is not None:
+                if b - a != 1:
+                    raise ValueError("Frame has discontinuous bars")
         # Check all bars are in the same 4-bar group
         if self.bars.keys() != set(bar % 4 for bar in self.bars):
             raise ValueError("Frame contains bars from different 4-bar groups")
@@ -104,7 +105,7 @@ class Memo1DumpedSection(JubeatAnalyserDumpedSection):
             notes_by_bar[bar_index].append(note)
 
         # Pre-render timing bars
-        bars: Dict[int, List[str]] = defaultdict(dict)
+        bars: Dict[int, List[str]] = defaultdict(list)
         chosen_symbols: Dict[BeatsTime, str] = {}
         symbols_iterator = iter(NOTE_SYMBOLS)
         for bar_index in range(ceil(self.length)):
@@ -227,7 +228,7 @@ def _dump_memo1_chart(
     )
 
     # Jubeat Analyser format command
-    sections[0].commands["memo1"] = None
+    sections[BeatsTime(0)].commands["memo1"] = None
 
     # Actual output to file
     file = StringIO()
@@ -242,11 +243,13 @@ def _dump_memo1_chart(
 def _dump_memo1_internal(song: Song, circle_free: bool) -> List[ChartFile]:
     files: List[ChartFile] = []
     for difficulty, chart in song.charts.items():
+        timing = chart.timing or song.global_timing
+        assert timing is not None
         contents = _dump_memo1_chart(
             difficulty,
             chart,
             song.metadata,
-            chart.timing or song.global_timing,
+            timing,
             circle_free,
         )
         files.append(ChartFile(contents, song, difficulty, chart))

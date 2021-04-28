@@ -7,10 +7,10 @@ from functools import partial
 from io import StringIO
 from itertools import chain, zip_longest
 from math import ceil
-from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Set, Tuple, Union, cast, Callable
 
 from more_itertools import chunked, collapse, intersperse, mark_ends, windowed
-from path import Path
+from pathlib import Path
 from sortedcontainers import SortedKeyList
 
 from jubeatools import __version__
@@ -221,7 +221,7 @@ def _dump_memo_chart(
 ) -> StringIO:
 
     _raise_if_unfit_for_memo(chart, timing, circle_free)
-
+    
     sections = create_sections_from_chart(
         MemoDumpedSection, chart, difficulty, timing, metadata, circle_free
     )
@@ -259,11 +259,13 @@ def _dump_memo_chart(
 def _dump_memo_internal(song: Song, circle_free: bool) -> List[ChartFile]:
     files: List[ChartFile] = []
     for difficulty, chart in song.charts.items():
+        timing = chart.timing or song.global_timing
+        assert timing is not None
         contents = _dump_memo_chart(
             difficulty,
             chart,
             song.metadata,
-            chart.timing or song.global_timing,
+            timing,
             circle_free,
         )
         files.append(ChartFile(contents, song, difficulty, chart))

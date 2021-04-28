@@ -10,7 +10,7 @@ https://github.com/Stepland/memon
 
 from io import StringIO
 from itertools import chain
-from typing import IO, Any, Dict, Iterable, List, Tuple, Union
+from typing import IO, Any, Dict, Iterable, List, Tuple, Union, Mapping
 
 import simplejson as json
 from marshmallow import (
@@ -22,7 +22,7 @@ from marshmallow import (
     validate,
     validates_schema,
 )
-from path import Path
+from pathlib import Path
 
 from jubeatools.song import *
 from jubeatools.utils import lcm
@@ -160,7 +160,7 @@ def load_memon_legacy(file: Path) -> Song:
         events=[BPMEvent(time=BeatsTime(0), BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
     )
-    charts = MultiDict()
+    charts: MultiDict[Chart] = MultiDict()
     for memon_chart in memon["data"]:
         charts.add(
             memon_chart["dif_name"],
@@ -187,7 +187,7 @@ def load_memon_0_1_0(file: Path) -> Song:
         events=[BPMEvent(time=BeatsTime(0), BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
     )
-    charts = MultiDict()
+    charts: MultiDict[Chart] = MultiDict()
     for difficulty, memon_chart in memon["data"].items():
         charts.add(
             difficulty,
@@ -221,7 +221,7 @@ def load_memon_0_2_0(file: Path) -> Song:
         events=[BPMEvent(time=BeatsTime(0), BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
     )
-    charts = MultiDict()
+    charts: MultiDict[Chart] = MultiDict()
     for difficulty, memon_chart in memon["data"].items():
         charts.add(
             difficulty,
@@ -254,7 +254,7 @@ def _get_timing(song: Song) -> Timing:
         return next(
             chart.timing
             for chart in song.charts.values()
-            if chart is not None
+            if chart.timing is not None
         )
 
 def _raise_if_unfit_for_v0(song: Song, version: str) -> None:
@@ -337,7 +337,7 @@ def dump_memon_legacy(song: Song, path: Path) -> Dict[Path, bytes]:
     _raise_if_unfit_for_v0(song, "legacy")
     timing = _get_timing(song)
 
-    memon = {
+    memon: Dict[str, Any] = {
         "metadata": {
             "song title": song.metadata.title,
             "artist": song.metadata.artist,
@@ -364,7 +364,7 @@ def dump_memon_legacy(song: Song, path: Path) -> Dict[Path, bytes]:
             }
         )
 
-    if path.isdir():
+    if path.is_dir():
         filepath = path / f"{song.metadata.title}.memon"
     else:
         filepath = path
@@ -377,7 +377,7 @@ def dump_memon_0_1_0(song: Song, path: Path) -> Dict[Path, bytes]:
     _raise_if_unfit_for_v0(song, "v0.1.0")
     timing= _get_timing(song)
 
-    memon = {
+    memon: Dict[str, Any] = {
         "version": "0.1.0",
         "metadata": {
             "song title": song.metadata.title,
@@ -400,7 +400,7 @@ def dump_memon_0_1_0(song: Song, path: Path) -> Dict[Path, bytes]:
             ],
         }
 
-    if path.isdir():
+    if path.is_dir():
         filepath = path / f"{song.metadata.title}.memon"
     else:
         filepath = path
@@ -413,7 +413,7 @@ def dump_memon_0_2_0(song: Song, path: Path) -> Dict[Path, bytes]:
     _raise_if_unfit_for_v0(song, "v0.2.0")
     timing = _get_timing(song)
 
-    memon = {
+    memon: Dict[str, Any] = {
         "version": "0.2.0",
         "metadata": {
             "song title": song.metadata.title,
@@ -443,7 +443,7 @@ def dump_memon_0_2_0(song: Song, path: Path) -> Dict[Path, bytes]:
             ],
         }
 
-    if path.isdir():
+    if path.is_dir():
         filepath = path / f"{song.metadata.title}.memon"
     else:
         filepath = path

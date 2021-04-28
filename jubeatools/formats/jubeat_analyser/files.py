@@ -1,23 +1,23 @@
 from typing import Dict, List
 
-from path import Path
+from pathlib import Path
 
 
 def load_files(path: Path) -> Dict[Path, List[str]]:
     # The vast majority of memo files you will encounter will be propely
     # decoded using shift-jis-2004. Get ready for endless fun with the small
     # portion of files that won't
-    files = {}
-    if path.isdir():
-        for f in path.files("*.txt"):
+    files: Dict[Path, List[str]] = {}
+    if path.is_dir():
+        for f in path.glob("*.txt"):
             _load_file(f, files)
-    elif path.isfile():
+    elif path.is_file():
         _load_file(path, files)
     return files
 
 
 def _load_file(path: Path, files: Dict[Path, List[str]]):
     try:
-        files[path] = path.lines("shift-jis-2004")
+        files[path] = path.read_text(encoding="shift-jis-2004").split("\n")
     except UnicodeDecodeError:
         pass
