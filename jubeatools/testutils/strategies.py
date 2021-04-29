@@ -101,7 +101,8 @@ def bad_notes(draw: DrawFunc, longs: bool) -> Set[Union[TapNote, LongNote]]:
     note_strat = tap_note()
     if longs:
         note_strat = st.one_of(note_strat, long_note())
-    return draw(st.sets(note_strat, max_size=32))
+    notes: Set[Union[TapNote, LongNote]] = draw(st.sets(note_strat, max_size=32))
+    return notes
 
 
 @st.composite
@@ -112,7 +113,7 @@ def notes(draw: DrawFunc, options: NoteOption) -> Set[Union[TapNote, LongNote]]:
     note_strat = tap_note()
     if NoteOption.LONGS in options:
         note_strat = st.one_of(note_strat, long_note())
-    raw_notes = draw(st.sets(note_strat, max_size=32))
+    raw_notes: Set[Union[TapNote, LongNote]] = draw(st.sets(note_strat, max_size=32))
 
     if NoteOption.COLLISIONS in options:
         return raw_notes
@@ -145,7 +146,8 @@ def notes(draw: DrawFunc, options: NoteOption) -> Set[Union[TapNote, LongNote]]:
 
 @st.composite
 def bpm_strat(draw: DrawFunc) -> Decimal:
-    return draw(st.decimals(min_value=1, max_value=1000, places=3))
+    d: Decimal = draw(st.decimals(min_value=1, max_value=1000, places=3))
+    return d
 
 
 @st.composite
