@@ -19,7 +19,7 @@ sortedcontainers = "^2.3.0"
 python-constraint = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
+pytest = "^6.2.3"
 rope = "^0.17.0"
 black = "^19.10b0"
 hypothesis = "^5.16.3"
