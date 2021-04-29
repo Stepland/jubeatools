@@ -10,7 +10,8 @@ https://github.com/Stepland/memon
 
 from io import StringIO
 from itertools import chain
-from typing import IO, Any, Dict, Iterable, List, Tuple, Union, Mapping
+from pathlib import Path
+from typing import IO, Any, Dict, Iterable, List, Mapping, Tuple, Union
 
 import simplejson as json
 from marshmallow import (
@@ -22,7 +23,6 @@ from marshmallow import (
     validate,
     validates_schema,
 )
-from pathlib import Path
 
 from jubeatools.song import *
 from jubeatools.utils import lcm
@@ -67,7 +67,7 @@ class MemonNote(StrictSchema):
     p = fields.Integer(required=True, validate=validate.Range(min=0, max=11))
 
     @validates_schema
-    def validate_tail_tip_position(self, data, **kwargs):
+    def validate_tail_tip_position(self, data: Dict[str, int], **kwargs: Any) -> None:
         if data["l"] > 0:
             x = data["n"] % 4
             y = data["n"] // 4
@@ -133,9 +133,15 @@ class Memon_0_2_0(StrictSchema):
     )
 
 
-def _load_raw_memon(file: Path) -> dict:
+def _load_raw_memon(file: Path) -> Dict[str, Any]:
     with open(file) as f:
-        return json.load(f, use_decimal=True)
+        res = json.load(f, use_decimal=True)
+        if not isinstance(res, dict):
+            raise ValueError(
+                "JSON file does not represent a valid memon file : "
+                "The top level of a memon file should be a JSON Object"
+            )
+        return res
 
 
 def _load_memon_note_v0(note: dict, resolution: int) -> Union[TapNote, LongNote]:
@@ -247,27 +253,32 @@ def _long_note_tail_value_v0(note: LongNote) -> int:
             f"memon cannot represent a long note with its tail starting ({dx}, {dy}) away from the note"
         ) from None
 
+
 def _get_timing(song: Song) -> Timing:
     if song.global_timing is not None:
         return song.global_timing
     else:
         return next(
-            chart.timing
-            for chart in song.charts.values()
-            if chart.timing is not None
+            chart.timing for chart in song.charts.values() if chart.timing is not None
         )
+
 
 def _raise_if_unfit_for_v0(song: Song, version: str) -> None:
 
     """Raises an exception if the Song object is ill-formed or contains information
     that cannot be represented in a memon v0.x.y file (includes legacy)"""
 
-    if len(set(chart.timing for chart in song.charts.values() if chart is not None)) > 1:
+    if (
+        len(set(chart.timing for chart in song.charts.values() if chart is not None))
+        > 1
+    ):
         raise ValueError(
             f"memon:{version} cannot represent a song with per-chart timing"
         )
-    
-    if song.global_timing is None and all(chart.timing is None for chart in song.charts.values()):
+
+    if song.global_timing is None and all(
+        chart.timing is None for chart in song.charts.values()
+    ):
         raise ValueError("The song has no timing information")
 
     timing = _get_timing(song)
@@ -331,8 +342,7 @@ def _dump_memon_note_v0(
     return memon_note
 
 
-
-def dump_memon_legacy(song: Song, path: Path) -> Dict[Path, bytes]:
+def dump_memon_legacy(song: Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "legacy")
     timing = _get_timing(song)
@@ -372,10 +382,10 @@ def dump_memon_legacy(song: Song, path: Path) -> Dict[Path, bytes]:
     return {filepath: _dump_to_json(memon)}
 
 
-def dump_memon_0_1_0(song: Song, path: Path) -> Dict[Path, bytes]:
+def dump_memon_0_1_0(song: Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "v0.1.0")
-    timing= _get_timing(song)
+    timing = _get_timing(song)
 
     memon: Dict[str, Any] = {
         "version": "0.1.0",
@@ -408,7 +418,7 @@ def dump_memon_0_1_0(song: Song, path: Path) -> Dict[Path, bytes]:
     return {filepath: _dump_to_json(memon)}
 
 
-def dump_memon_0_2_0(song: Song, path: Path) -> Dict[Path, bytes]:
+def dump_memon_0_2_0(song: Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "v0.2.0")
     timing = _get_timing(song)

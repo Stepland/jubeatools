@@ -1,9 +1,10 @@
 """
 Hypothesis strategies to generate notes and charts
 """
+from decimal import Decimal
 from enum import Enum, Flag, auto
 from itertools import product
-from typing import Set, Union
+from typing import Any, Callable, List, Optional, Set, TypeVar, Union
 
 import hypothesis.strategies as st
 from multidict import MultiDict
@@ -20,12 +21,17 @@ from jubeatools.song import (
     TapNote,
     Timing,
 )
+from jubeatools.testutils.typing import DrawFunc
 
 
 @st.composite
 def beat_time(
-    draw, min_section=None, max_section=None, min_numerator=None, max_numerator=None
-):
+    draw: DrawFunc,
+    min_section: Optional[int] = None,
+    max_section: Optional[int] = None,
+    min_numerator: Optional[int] = None,
+    max_numerator: Optional[int] = None,
+) -> BeatsTime:
     denominator = draw(st.sampled_from([4, 8, 16, 3, 5]))
 
     if min_section is not None:
@@ -51,21 +57,21 @@ def beat_time(
 
 
 @st.composite
-def note_position(draw):
+def note_position(draw: DrawFunc) -> NotePosition:
     x = draw(st.integers(min_value=0, max_value=3))
     y = draw(st.integers(min_value=0, max_value=3))
     return NotePosition(x, y)
 
 
 @st.composite
-def tap_note(draw):
+def tap_note(draw: DrawFunc) -> TapNote:
     time = draw(beat_time(max_section=10))
     position = draw(note_position())
     return TapNote(time, position)
 
 
 @st.composite
-def long_note(draw):
+def long_note(draw: DrawFunc) -> LongNote:
     time = draw(beat_time(max_section=10))
     position = draw(note_position())
     duration = draw(beat_time(min_numerator=1, max_section=3))
@@ -91,7 +97,7 @@ class NoteOption(Flag):
 
 
 @st.composite
-def bad_notes(draw, longs: bool):
+def bad_notes(draw: DrawFunc, longs: bool) -> Set[Union[TapNote, LongNote]]:
     note_strat = tap_note()
     if longs:
         note_strat = st.one_of(note_strat, long_note())
@@ -99,7 +105,7 @@ def bad_notes(draw, longs: bool):
 
 
 @st.composite
-def notes(draw, options: NoteOption):
+def notes(draw: DrawFunc, options: NoteOption) -> Set[Union[TapNote, LongNote]]:
     if (NoteOption.COLLISIONS in options) and (NoteOption.LONGS not in options):
         raise ValueError("Can't ask for collisions without longs")
 
@@ -138,37 +144,39 @@ def notes(draw, options: NoteOption):
 
 
 @st.composite
-def bpm_strat(draw):
+def bpm_strat(draw: DrawFunc) -> Decimal:
     return draw(st.decimals(min_value=1, max_value=1000, places=3))
 
 
 @st.composite
-def bpm_change(draw):
+def bpm_change(draw: DrawFunc) -> BPMEvent:
     time = draw(beat_time(min_section=1, max_section=10))
     bpm = draw(bpm_strat())
     return BPMEvent(time, bpm)
 
 
 @st.composite
-def timing_info(
-    draw, bpm_changes: bool = True,
-):
+def timing_info(draw: DrawFunc, bpm_changes: bool = True,) -> Timing:
     first_bpm = draw(bpm_strat())
     first_event = BPMEvent(BeatsTime(0), first_bpm)
     events = [first_event]
     if bpm_changes:
-        other_events = draw(
-            st.lists(bpm_change(), unique_by=lambda b: b.time).map(
-                lambda l: sorted(l, key=lambda b: b.time)
-            )
+        raw_bpm_changes = st.lists(bpm_change(), unique_by=get_bpm_change_time)
+        sorted_bpm_changes = raw_bpm_changes.map(
+            lambda l: sorted(l, key=get_bpm_change_time)
         )
+        other_events = draw(sorted_bpm_changes)
         events += other_events
     beat_zero_offset = draw(st.decimals(min_value=0, max_value=20, places=3))
     return Timing(events=events, beat_zero_offset=beat_zero_offset)
 
 
+def get_bpm_change_time(b: BPMEvent) -> BeatsTime:
+    return b.time
+
+
 @st.composite
-def chart(draw, timing_strat, notes_strat):
+def chart(draw: DrawFunc, timing_strat: Any, notes_strat: Any) -> Chart:
     level = draw(st.integers(min_value=0))
     timing = draw(timing_strat)
     notes = draw(notes_strat)
@@ -180,7 +188,7 @@ def chart(draw, timing_strat, notes_strat):
 
 
 @st.composite
-def preview(draw):
+def preview(draw: DrawFunc) -> Preview:
     start = draw(
         st.decimals(min_value=0, allow_nan=False, allow_infinity=False, places=3)
     )
@@ -191,7 +199,7 @@ def preview(draw):
 
 
 @st.composite
-def metadata(draw):
+def metadata(draw: DrawFunc) -> Metadata:
     return Metadata(
         title=draw(st.text()),
         artist=draw(st.text()),
@@ -209,8 +217,11 @@ class TimingOption(Flag):
 
 @st.composite
 def song(
-    draw, timing_options: TimingOption, extra_diffs: bool, notes_options: NoteOption,
-):
+    draw: DrawFunc,
+    timing_options: TimingOption,
+    extra_diffs: bool,
+    notes_options: NoteOption,
+) -> Song:
     if not ((TimingOption.GLOBAL | TimingOption.PER_CHART) & timing_options):
         raise ValueError(
             "Invalid timing options, at least one of the flags GLOBAL or PER_CHART must be set"
@@ -239,7 +250,7 @@ def song(
         _chart = draw(chart(chart_timing_strat, note_strat))
         charts.add(diff_name, _chart)
 
-    global_timing_start = st.none()
+    global_timing_start: st.SearchStrategy[Optional[Timing]] = st.none()
     if TimingOption.GLOBAL in timing_options:
         global_timing_start = timing_strat
 

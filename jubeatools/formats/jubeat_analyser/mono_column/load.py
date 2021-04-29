@@ -7,11 +7,12 @@ from decimal import Decimal
 from enum import Enum
 from functools import reduce
 from itertools import product
+from pathlib import Path
 from typing import Dict, Iterator, List, Set, Tuple, Union
 
 import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
-from pathlib import Path
+from parsimonious.nodes import Node
 
 from jubeatools.song import (
     BeatsTime,
@@ -20,12 +21,13 @@ from jubeatools.song import (
     LongNote,
     Metadata,
     NotePosition,
+    Preview,
     SecondsTime,
     Song,
     TapNote,
     Timing,
-    Preview,
 )
+from jubeatools.utils import none_or
 
 from ..command import is_command, parse_command
 from ..files import load_files
@@ -57,11 +59,11 @@ mono_column_chart_line_grammar = Grammar(
 
 
 class MonoColumnChartLineVisitor(NodeVisitor):
-    def visit_line(self, node, visited_children):
+    def visit_line(self, node: Node, visited_children: List[Node]) -> str:
         _, chart_line, _, _ = node.children
-        return chart_line.text
+        return chart_line.text  # type: ignore
 
-    def generic_visit(self, node, visited_children):
+    def generic_visit(self, node: Node, visited_children: list) -> None:
         ...
 
 
@@ -75,9 +77,7 @@ def is_mono_column_chart_line(line: str) -> bool:
 
 
 def parse_mono_column_chart_line(line: str) -> str:
-    return MonoColumnChartLineVisitor().visit(
-        mono_column_chart_line_grammar.parse(line)
-    )
+    return MonoColumnChartLineVisitor().visit(mono_column_chart_line_grammar.parse(line))  # type: ignore
 
 
 SEPARATOR = re.compile(r"--.*")
@@ -108,7 +108,7 @@ class MonoColumnLoadedSection:
     length: Decimal
     tempo: Decimal
 
-    def blocs(self, bpp=2) -> Iterator[List[List[str]]]:
+    def blocs(self, bpp: int = 2) -> Iterator[List[List[str]]]:
         if bpp not in (1, 2):
             raise ValueError(f"Invalid bpp : {bpp}")
         elif bpp == 2:
@@ -121,19 +121,12 @@ class MonoColumnLoadedSection:
 
 
 class MonoColumnParser(JubeatAnalyserParser):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
+        self.current_chart_lines: List[str] = []
         self.sections: List[MonoColumnLoadedSection] = []
 
-    def do_memo(self):
-        raise ValueError(
-            "This file indicates it's using another jubeat analyser format "
-            "than the one the currently selected parser is designed for"
-        )
-
-    do_boogie = do_memo2 = do_memo1 = do_memo
-
-    def do_bpp(self, value):
+    def do_bpp(self, value: Union[int, str]) -> None:
         if self.sections:
             raise ValueError(
                 "This file apparently changes its bytes per panel value (#bpp) "
@@ -142,7 +135,7 @@ class MonoColumnParser(JubeatAnalyserParser):
         else:
             self._do_bpp(value)
 
-    def move_to_next_section(self):
+    def move_to_next_section(self) -> None:
         if len(self.current_chart_lines) % 4 != 0:
             raise SyntaxError("Current section is missing chart lines")
         else:
@@ -157,14 +150,14 @@ class MonoColumnParser(JubeatAnalyserParser):
             self.current_chart_lines = []
             self.section_starting_beat += self.beats_per_section
 
-    def append_chart_line(self, line: str):
+    def append_chart_line(self, line: str) -> None:
         if self.bytes_per_panel == 1 and len(line) != 4:
             raise SyntaxError(f"Invalid chart line for #bpp=1 : {line}")
         elif self.bytes_per_panel == 2 and len(line.encode("shift-jis-2004")) != 8:
             raise SyntaxError(f"Invalid chart line for #bpp=2 : {line}")
         self.current_chart_lines.append(line)
 
-    def load_line(self, raw_line: str):
+    def load_line(self, raw_line: str) -> None:
         line = raw_line.strip()
         if is_command(line):
             command, value = parse_command(line)
@@ -292,21 +285,21 @@ def _load_mono_column_file(lines: List[str]) -> Song:
     metadata = Metadata(
         title=parser.title,
         artist=parser.artist,
-        audio=parser.music,
-        cover=parser.jacket,
+        audio=none_or(Path, parser.music),
+        cover=none_or(Path, parser.jacket),
     )
     if parser.preview_start is not None:
         metadata.preview = Preview(
-            start=SecondsTime(parser.preview_start) / 1000,
-            length=SecondsTime(10)
+            start=SecondsTime(parser.preview_start) / 1000, length=SecondsTime(10)
         )
 
     timing = Timing(
         events=parser.timing_events, beat_zero_offset=SecondsTime(parser.offset) / 1000
     )
     charts = {
-        parser.difficulty: Chart(
-            level=parser.level,
+        parser.difficulty
+        or "?": Chart(
+            level=Decimal(parser.level),
             timing=timing,
             notes=sorted(parser.notes(), key=lambda n: (n.time, n.position)),
         )

@@ -5,24 +5,25 @@ from dataclasses import astuple, dataclass
 from decimal import Decimal
 from functools import reduce
 from itertools import chain, product, zip_longest
+from pathlib import Path
 from typing import Dict, Iterator, List, Mapping, Optional, Set, Tuple, Union
 
 import constraint
 from more_itertools import collapse, mark_ends
 from parsimonious import Grammar, NodeVisitor, ParseError
-from pathlib import Path
 
 from jubeatools.song import (
     Chart,
     LongNote,
     Metadata,
     NotePosition,
+    Preview,
     SecondsTime,
     Song,
     TapNote,
     Timing,
-    Preview,
 )
+from jubeatools.utils import none_or
 
 from ..command import is_command, parse_command
 from ..files import load_files
@@ -66,11 +67,11 @@ class MemoLoadedSection:
     length: Decimal
     tempo: Decimal
 
-    def __str__(self):
+    def __str__(self) -> str:
         res = []
         if self.length != 4:
             res += [f"b={self.length}", ""]
-        for symbol, time in self.symbols:
+        for symbol, time in self.symbols.items():
             res += [f"*{symbol}:{time}", ""]
         for _, is_last, frame in mark_ends(self.frames):
             res += [str(frame)]
@@ -80,27 +81,23 @@ class MemoLoadedSection:
 
 
 class MemoParser(JubeatAnalyserParser):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
+        self.current_chart_lines: List[DoubleColumnChartLine] = []
         self.symbols: Dict[str, Decimal] = {}
         self.frames: List[MemoFrame] = []
         self.sections: List[MemoLoadedSection] = []
 
-    def do_memo(self):
+    def do_memo(self) -> None:
         ...
 
-    def do_memo1(self):
-        raise ValueError("This is not a memo file")
-
-    do_boogie = do_memo2 = do_memo1
-
-    def do_bpp(self, value):
+    def do_bpp(self, value: str) -> None:
         if self.sections or self.frames:
             raise ValueError("jubeatools does not handle changes of #bpp halfway")
         else:
             self._do_bpp(value)
 
-    def append_chart_line(self, line: DoubleColumnChartLine):
+    def append_chart_line(self, line: DoubleColumnChartLine) -> None:
         if len(line.position.encode("shift-jis-2004")) != 4 * self.bytes_per_panel:
             raise SyntaxError(
                 f"Invalid chart line for #bpp={self.bytes_per_panel} : {line}"
@@ -112,19 +109,10 @@ class MemoParser(JubeatAnalyserParser):
         if len(self.current_chart_lines) == 4:
             self._push_frame()
 
-    def _split_chart_line(self, line: str):
-        if self.bytes_per_panel == 2:
-            return split_double_byte_line(line)
-        else:
-            return list(line)
-
     def _frames_duration(self) -> Decimal:
-        return sum(
-            (frame.duration for frame in self.frames),
-            start=Decimal(0)
-        )
+        return sum((frame.duration for frame in self.frames), start=Decimal(0))
 
-    def _push_frame(self):
+    def _push_frame(self) -> None:
         position_part = [
             self._split_chart_line(memo_line.position)
             for memo_line in self.current_chart_lines
@@ -145,7 +133,7 @@ class MemoParser(JubeatAnalyserParser):
         self.frames.append(frame)
         self.current_chart_lines = []
 
-    def _push_section(self):
+    def _push_section(self) -> None:
         self.sections.append(
             MemoLoadedSection(
                 frames=deepcopy(self.frames),
@@ -157,7 +145,7 @@ class MemoParser(JubeatAnalyserParser):
         self.frames = []
         self.section_starting_beat += self.beats_per_section
 
-    def finish_last_few_notes(self):
+    def finish_last_few_notes(self) -> None:
         """Call this once when the end of the file is reached,
         flushes the chart line and chart frame buffers to create the last chart
         section"""
@@ -169,7 +157,7 @@ class MemoParser(JubeatAnalyserParser):
             self._push_frame()
         self._push_section()
 
-    def load_line(self, raw_line: str):
+    def load_line(self, raw_line: str) -> None:
         line = raw_line.strip()
         if is_command(line):
             command, value = parse_command(line)
@@ -203,8 +191,7 @@ class MemoParser(JubeatAnalyserParser):
             for i, frame in enumerate(section.frames):
                 if frame.timing_part:
                     frame_starting_beat = sum(
-                        (f.duration for f in section.frames[:i]),
-                        start=Decimal(0)
+                        (f.duration for f in section.frames[:i]), start=Decimal(0)
                     )
                     local_symbols = {
                         symbol: Decimal("0.25") * i + frame_starting_beat
@@ -318,21 +305,21 @@ def _load_memo_file(lines: List[str]) -> Song:
     metadata = Metadata(
         title=parser.title,
         artist=parser.artist,
-        audio=parser.music,
-        cover=parser.jacket,
+        audio=none_or(Path, parser.music),
+        cover=none_or(Path, parser.jacket),
     )
     if parser.preview_start is not None:
         metadata.preview = Preview(
-            start=SecondsTime(parser.preview_start) / 1000,
-            length=SecondsTime(10)
+            start=SecondsTime(parser.preview_start) / 1000, length=SecondsTime(10)
         )
 
     timing = Timing(
         events=parser.timing_events, beat_zero_offset=SecondsTime(parser.offset) / 1000
     )
     charts = {
-        parser.difficulty: Chart(
-            level=parser.level,
+        parser.difficulty
+        or "?": Chart(
+            level=Decimal(parser.level),
             timing=timing,
             notes=sorted(parser.notes(), key=lambda n: (n.time, n.position)),
         )

@@ -1,4 +1,6 @@
 from decimal import Decimal
+from pathlib import Path
+from typing import List, Union
 
 from hypothesis import given
 
@@ -21,18 +23,20 @@ from ..memo2.load import Memo2Parser
 
 
 @given(notes_strat(NoteOption.LONGS))
-def test_many_notes(notes):
+def test_many_notes(notes: List[Union[TapNote, LongNote]]) -> None:
     timing = Timing(
         events=[BPMEvent(BeatsTime(0), Decimal(120))], beat_zero_offset=SecondsTime(0)
     )
     chart = Chart(
-        level=0, timing=timing, notes=sorted(notes, key=lambda n: (n.time, n.position))
+        level=Decimal(0),
+        timing=timing,
+        notes=sorted(notes, key=lambda n: (n.time, n.position)),
     )
-    metadata = Metadata("", "", "", "")
+    metadata = Metadata("", "", Path(""), Path(""))
     string_io = _dump_memo2_chart("", chart, metadata, timing)
-    chart = string_io.getvalue()
+    chart_text = string_io.getvalue()
     parser = Memo2Parser()
-    for line in chart.split("\n"):
+    for line in chart_text.split("\n"):
         parser.load_line(line)
     parser.finish_last_few_notes()
     actual = set(parser.notes())

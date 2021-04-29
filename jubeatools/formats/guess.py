@@ -1,8 +1,7 @@
 import json
 import re
-from typing import Any, List
-
 from pathlib import Path
+from typing import Any, List
 
 from .enum import Format
 

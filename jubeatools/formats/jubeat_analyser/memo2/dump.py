@@ -7,10 +7,10 @@ from functools import partial
 from io import StringIO
 from itertools import chain, zip_longest
 from math import ceil
+from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from more_itertools import chunked, collapse, intersperse, mark_ends, windowed
-from pathlib import Path
 from sortedcontainers import SortedKeyList
 
 from jubeatools import __version__
@@ -48,7 +48,7 @@ from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 AnyNote = Union[TapNote, LongNote, LongNoteEnd]
 
-EMPTY_BEAT_SYMBOL = '−'  # U+02212 : MINUS SIGN
+EMPTY_BEAT_SYMBOL = "−"  # U+02212 : MINUS SIGN
 EMPTY_POSITION_SYMBOL = "□"  # U+025A1 : WHITE SQUARE
 
 
@@ -129,8 +129,10 @@ class Memo2Section:
             notes = notes_by_bar.get(bar_index, [])
             events = events_by_bar.get(bar_index, [])
             bar_length = lcm(
-                *(note.time.denominator for note in notes),
-                *(event.time.denominator for event in events),
+                *(
+                    [note.time.denominator for note in notes]
+                    + [event.time.denominator for event in events]
+                )
             )
             if bar_length < 3:
                 bar_length = 4
@@ -140,7 +142,7 @@ class Memo2Section:
                 time_in_section = note.time % BeatsTime(4)
                 time_in_bar = note.time % Fraction(1)
                 time_index = time_in_bar.numerator * (
-                    bar_length / time_in_bar.denominator
+                    bar_length // time_in_bar.denominator
                 )
                 if time_index not in bar_dict:
                     symbol = next(symbols_iterator)
@@ -150,7 +152,7 @@ class Memo2Section:
             for event in events:
                 time_in_bar = event.time % Fraction(1)
                 time_index = time_in_bar.numerator * (
-                    bar_length / time_in_bar.denominator
+                    bar_length // time_in_bar.denominator
                 )
                 if isinstance(event, StopEvent):
                     bar_dict[time_index].stops.append(event)
@@ -237,7 +239,9 @@ class Memo2Section:
         yield from collapse(intersperse("", dumped_frames))
 
 
-def _raise_if_unfit_for_memo2(chart: Chart, timing: Timing, circle_free: bool = False):
+def _raise_if_unfit_for_memo2(
+    chart: Chart, timing: Timing, circle_free: bool = False
+) -> None:
     if len(timing.events) < 1:
         raise ValueError("No BPM found in file") from None
 
@@ -266,7 +270,10 @@ def _dump_memo2_chart(
 
     _raise_if_unfit_for_memo2(chart, timing, circle_free)
 
-    sections = SortedDefaultDict(Memo2Section)
+    def make_section(b: BeatsTime) -> Memo2Section:
+        return Memo2Section()
+
+    sections = SortedDefaultDict(make_section)
 
     timing_events = sorted(timing.events, key=lambda e: e.time)
     notes = SortedKeyList(set(chart.notes), key=lambda n: n.time)
@@ -334,11 +341,7 @@ def _dump_memo2_internal(song: Song, circle_free: bool = False) -> List[ChartFil
         timing = chart.timing or song.global_timing
         assert timing is not None
         contents = _dump_memo2_chart(
-            difficulty,
-            chart,
-            song.metadata,
-            timing,
-            circle_free,
+            difficulty, chart, song.metadata, timing, circle_free,
         )
         files.append(ChartFile(contents, song, difficulty, chart))
 

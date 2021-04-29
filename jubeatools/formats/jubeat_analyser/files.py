@@ -1,6 +1,5 @@
-from typing import Dict, List
-
 from pathlib import Path
+from typing import Dict, List
 
 
 def load_files(path: Path) -> Dict[Path, List[str]]:
@@ -16,7 +15,7 @@ def load_files(path: Path) -> Dict[Path, List[str]]:
     return files
 
 
-def _load_file(path: Path, files: Dict[Path, List[str]]):
+def _load_file(path: Path, files: Dict[Path, List[str]]) -> None:
     try:
         files[path] = path.read_text(encoding="shift-jis-2004").split("\n")
     except UnicodeDecodeError:

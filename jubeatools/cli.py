@@ -1,11 +1,11 @@
 """Command Line Interface"""
-from typing import Optional
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import click
-from pathlib import Path
 
 from jubeatools.formats import DUMPERS, LOADERS
-from jubeatools.formats.enum import JUBEAT_ANALYSER_FORMATS
+from jubeatools.formats.enum import JUBEAT_ANALYSER_FORMATS, Format
 from jubeatools.formats.guess import guess_format
 
 
@@ -22,9 +22,14 @@ from jubeatools.formats.guess import guess_format
     help="Output file format",
 )
 @click.option(
-    "--circlefree", is_flag=True, help="Use #circlefree=1 for jubeat analyser formats"
+    "--circlefree",
+    "circle_free",
+    is_flag=True,
+    help="Use #circlefree=1 for jubeat analyser formats",
 )
-def convert(src, dst, output_format, **kwargs):
+def convert(
+    src: str, dst: str, output_format: Format, **kwargs: Dict[str, Any]
+) -> None:
     """Convert SRC to DST using the format specified by -f"""
     input_format = guess_format(Path(src))
     click.echo(f"Detected input file format : {input_format}")
@@ -40,13 +45,7 @@ def convert(src, dst, output_format, **kwargs):
         raise ValueError(f"Unsupported output format : {input_format}")
 
     song = loader(Path(src))
-
-    extra_args = {}
-    if output_format in JUBEAT_ANALYSER_FORMATS:
-        extra_args["circle_free"] = kwargs.get("circlefree", False)
-
-    files = dumper(song, Path(dst), **extra_args)
-
+    files = dumper(song, Path(dst), **kwargs)
     for path, contents in files.items():
         with path.open("wb") as f:
             f.write(contents)

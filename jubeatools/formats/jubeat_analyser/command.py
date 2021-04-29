@@ -29,6 +29,7 @@ from numbers import Number
 from typing import Any, Iterable, List, Optional, Tuple, Union
 
 from parsimonious import Grammar, NodeVisitor, ParseError
+from parsimonious.nodes import Node
 
 command_grammar = Grammar(
     r"""
@@ -54,29 +55,33 @@ class CommandVisitor(NodeVisitor):
     """Returns a (key, value) tuple or None if the line contains no useful
     information for the parser (a comment or an empty line)"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.key = None
-        self.value = None
+        self.key: Optional[str] = None
+        self.value: Optional[str] = None
 
-    def visit_line(self, node, visited_children):
+    def visit_line(
+        self, node: Node, visited_children: List[Node]
+    ) -> Tuple[str, Optional[str]]:
+        if self.key is None:
+            raise ValueError("No key found after parsing command")
         return self.key, self.value
 
-    def visit_hash_command(self, node, visited_children):
+    def visit_hash_command(self, node: Node, visited_children: List[Node]) -> None:
         _, key, _ = node.children
         self.key = key.text
 
-    def visit_short_command(self, node, visited_children):
+    def visit_short_command(self, node: Node, visited_children: List[Node]) -> None:
         letter, _ = node.children
         self.key = letter.text
 
-    def visit_quoted_value(self, node, visited_children):
+    def visit_quoted_value(self, node: Node, visited_children: List[Node]) -> None:
         self.value = node.text
 
-    def visit_number(self, node, visited_children):
+    def visit_number(self, node: Node, visited_children: List[Node]) -> None:
         self.value = node.text
 
-    def generic_visit(self, node, visited_children):
+    def generic_visit(self, node: Node, visited_children: List[Node]) -> None:
         ...
 
 
@@ -89,9 +94,9 @@ def is_command(line: str) -> bool:
         return True
 
 
-def parse_command(line: str) -> Tuple[str, str]:
+def parse_command(line: str) -> Tuple[str, Optional[str]]:
     try:
-        return CommandVisitor().visit(command_grammar.parse(line))
+        return CommandVisitor().visit(command_grammar.parse(line))  # type: ignore
     except ParseError:
         if line.strip()[0] == "#":
             raise ParseError(f"Invalid command syntax : {line}") from None

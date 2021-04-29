@@ -5,10 +5,21 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from fractions import Fraction
 from itertools import chain
-from typing import Callable, Dict, Iterator, List, Mapping, Optional, Union, TypeVar
+from pathlib import Path
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
-from pathlib import Path
 from sortedcontainers import SortedDict, SortedKeyList
 
 from jubeatools.formats.filetypes import ChartFile
@@ -80,7 +91,7 @@ DEFAULT_EXTRA_SYMBOLS = (
 )
 
 
-def fraction_to_decimal(frac: Fraction):
+def fraction_to_decimal(frac: Fraction) -> Decimal:
     "Thanks stackoverflow ! https://stackoverflow.com/a/40468867/10768117"
     return frac.numerator / Decimal(frac.denominator)
 
@@ -91,21 +102,25 @@ class LongNoteEnd:
     position: NotePosition
 
 
-class SortedDefaultDict(SortedDict):
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+class SortedDefaultDict(SortedDict, Generic[K, V]):
 
     """Custom SortedDict that also acts as a defaultdict,
     passes the key to the value factory"""
 
-    def __init__(self, factory, *args, **kwargs):
+    def __init__(self, factory: Callable[[K], V], *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.__factory__ = factory
 
-    def add_key(self, key):
+    def add_key(self, key: K) -> None:
         if key not in self:
             value = self.__factory__(key)
             self.__setitem__(key, value)
 
-    def __missing__(self, key):
+    def __missing__(self, key: K) -> V:
         value = self.__factory__(key)
         self.__setitem__(key, value)
         return value
@@ -143,7 +158,8 @@ class JubeatAnalyserDumpedSection(_JubeatAnalyerDumpedSection, ABC):
         ...
 
 
-S = TypeVar('S', bound=JubeatAnalyserDumpedSection)
+S = TypeVar("S", bound=JubeatAnalyserDumpedSection)
+
 
 def create_sections_from_chart(
     section_factory: Callable[[BeatsTime], S],
@@ -197,7 +213,7 @@ def create_sections_from_chart(
     # First, Set every single b=… value
     for key, next_key in windowed(chain(sections.keys(), [None]), 2):
         if next_key is None:
-            length = 4
+            length = Decimal(4)
         else:
             length = fraction_to_decimal(next_key - key)
         sections[key].commands["b"] = length
@@ -227,12 +243,13 @@ def jubeat_analyser_file_dumper(
     """Factory function to create a jubeat analyser file dumper from the internal dumper"""
 
     def dumper(
-        song: Song, path: Path, *, circle_free: bool = False
+        song: Song, path: Path, *, circle_free: bool = False, **kwargs: Any
     ) -> Dict[Path, bytes]:
         files = internal_dumper(song, circle_free)
         res = {}
         if path.is_dir():
-            name_format = song.metadata.title + " {difficulty}{dedup_index}.txt"
+            title = song.metadata.title or "out"
+            name_format = title + " {difficulty}{dedup_index}.txt"
         else:
             name_format = "{base}{dedup_index}{ext}"
 
@@ -240,22 +257,22 @@ def jubeat_analyser_file_dumper(
             i = 0
             filepath = name_format.format(
                 base=path.parent / path.stem,
-                difficulty = DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty),
-                dedup_index = "" if i == 0 else f"-{i}",
+                difficulty=DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty),
+                dedup_index="" if i == 0 else f"-{i}",
                 ext=path.suffix,
             )
             while filepath in res:
                 i += 1
                 filepath = name_format.format(
                     base=path.parent / path.stem,
-                    difficulty = DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty),
-                    dedup_index = "" if i == 0 else f"-{i}",
+                    difficulty=DIFFICULTIES.get(
+                        chartfile.difficulty, chartfile.difficulty
+                    ),
+                    dedup_index="" if i == 0 else f"-{i}",
                     ext=path.suffix,
                 )
 
-            res[Path(filepath)] = chartfile.contents.getvalue().encode(
-                "shift-jis-2004"
-            )
+            res[Path(filepath)] = chartfile.contents.getvalue().encode("shift-jis-2004")
 
         return res
 

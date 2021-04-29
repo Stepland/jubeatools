@@ -2,9 +2,8 @@
 Module containing all the load/dump code for all file formats
 """
 
-from typing import IO, Any, Callable, Dict
-
 from pathlib import Path
+from typing import IO, Any, Callable, Dict
 
 from jubeatools.song import Song
 
@@ -27,11 +26,9 @@ from .memon import (
     load_memon_0_2_0,
     load_memon_legacy,
 )
-from .typing import Dumper
+from .typing import Dumper, Loader
 
-# Loaders deserialize a Path to a Song object
-# The Path can be a file or a folder depending on the format
-LOADERS: Dict[Format, Callable[[Path], Song]] = {
+LOADERS: Dict[Format, Loader] = {
     Format.MEMON_LEGACY: load_memon_legacy,
     Format.MEMON_0_1_0: load_memon_0_1_0,
     Format.MEMON_0_2_0: load_memon_0_2_0,

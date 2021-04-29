@@ -7,10 +7,10 @@ from functools import partial
 from io import StringIO
 from itertools import chain, zip_longest
 from math import ceil
+from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from more_itertools import chunked, collapse, intersperse, mark_ends, windowed
-from pathlib import Path
 from sortedcontainers import SortedKeyList
 
 from jubeatools import __version__
@@ -118,7 +118,7 @@ class Memo1DumpedSection(JubeatAnalyserDumpedSection):
                 time_in_section = note.time - self.current_beat
                 time_in_bar = time_in_section % Fraction(1)
                 time_index = time_in_bar.numerator * (
-                    bar_length / time_in_bar.denominator
+                    bar_length // time_in_bar.numerator
                 )
                 if time_index not in bar_dict:
                     symbol = next(symbols_iterator)
@@ -194,7 +194,9 @@ class Memo1DumpedSection(JubeatAnalyserDumpedSection):
         yield from collapse(intersperse("", dumped_frames))
 
 
-def _raise_if_unfit_for_memo1(chart: Chart, timing: Timing, circle_free: bool = False):
+def _raise_if_unfit_for_memo1(
+    chart: Chart, timing: Timing, circle_free: bool = False
+) -> None:
     if len(timing.events) < 1:
         raise ValueError("No BPM found in file") from None
 
@@ -246,11 +248,7 @@ def _dump_memo1_internal(song: Song, circle_free: bool) -> List[ChartFile]:
         timing = chart.timing or song.global_timing
         assert timing is not None
         contents = _dump_memo1_chart(
-            difficulty,
-            chart,
-            song.metadata,
-            timing,
-            circle_free,
+            difficulty, chart, song.metadata, timing, circle_free,
         )
         files.append(ChartFile(contents, song, difficulty, chart))
 

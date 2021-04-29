@@ -7,7 +7,9 @@ from jubeatools.song import BeatsTime, LongNote, NotePosition, TapNote
 from ..mono_column.load import MonoColumnParser
 
 
-def compare_chart_notes(chart: str, expected: Iterable[Union[TapNote, LongNote]]):
+def compare_chart_notes(
+    chart: str, expected: Iterable[Union[TapNote, LongNote]]
+) -> None:
     parser = MonoColumnParser()
     for line in chart.split("\n"):
         parser.load_line(line)
@@ -15,9 +17,8 @@ def compare_chart_notes(chart: str, expected: Iterable[Union[TapNote, LongNote]]
     assert set(expected) == set(actual)
 
 
-def test_simple_section():
-    chart = \
-        """
+def test_simple_section() -> None:
+    chart = """
         ①□□□
         □⑤□□
         □□⑨□
@@ -25,15 +26,13 @@ def test_simple_section():
         -------
         """
     expected = [
-        TapNote(time=BeatsTime(i), position=NotePosition(i, i))
-        for i in range(4)
+        TapNote(time=BeatsTime(i), position=NotePosition(i, i)) for i in range(4)
     ]
     compare_chart_notes(chart, expected)
 
 
-def test_compound_section():
-    chart = \
-        """
+def test_compound_section() -> None:
+    chart = """
         □①①□
         □⑩⑪□
         ④⑧⑨⑤
@@ -71,9 +70,8 @@ def test_compound_section():
     compare_chart_notes(chart, expected)
 
 
-def test_symbol_definition():
-    chart = \
-        """
+def test_symbol_definition() -> None:
+    chart = """
         *Ａ:2 //⑨と同タイミング
         *Ｂ:2.125
         *Ｃ:2.25 //⑩と同じ
@@ -115,9 +113,8 @@ def test_symbol_definition():
     compare_chart_notes(chart, expected)
 
 
-def test_half_width_symbols():
-    chart = \
-        """
+def test_half_width_symbols() -> None:
+    chart = """
         b=7
         *⑲:4.5
         *21:5
@@ -160,9 +157,8 @@ def test_half_width_symbols():
     compare_chart_notes(chart, expected)
 
 
-def test_irregular_beats_per_frame_1():
-    chart = \
-        """
+def test_irregular_beats_per_frame_1() -> None:
+    chart = """
         b=2.75
         ①□□□
         □□□□
@@ -194,9 +190,8 @@ def test_irregular_beats_per_frame_1():
     compare_chart_notes(chart, expected)
 
 
-def test_irregular_beats_per_frame_2():
-    chart = \
-        """
+def test_irregular_beats_per_frame_2() -> None:
+    chart = """
         b=1
         ①□□□
         □□□□
@@ -229,9 +224,8 @@ def test_irregular_beats_per_frame_2():
     compare_chart_notes(chart, expected)
 
 
-def test_long_notes():
-    chart = \
-        """
+def test_long_notes() -> None:
+    chart = """
         #holdbyarrow=1
         ①□□＜
         □□□□
@@ -255,9 +249,8 @@ def test_long_notes():
     compare_chart_notes(chart, expected)
 
 
-def test_long_notes_ambiguous_case():
-    chart = \
-        """
+def test_long_notes_ambiguous_case() -> None:
+    chart = """
         #holdbyarrow=1
         ①①＜＜
         □□□□
@@ -279,9 +272,8 @@ def test_long_notes_ambiguous_case():
 
 
 @pytest.mark.filterwarnings("error")
-def test_long_notes_simple_solution_no_warning():
-    chart = \
-        """
+def test_long_notes_simple_solution_no_warning() -> None:
+    chart = """
         #holdbyarrow=1
         □□□□
         ＞①①＜
@@ -301,9 +293,8 @@ def test_long_notes_simple_solution_no_warning():
     compare_chart_notes(chart, expected)
 
 
-def test_long_notes_complex_case():
-    chart = \
-        """
+def test_long_notes_complex_case() -> None:
+    chart = """
         #holdbyarrow=1
         □□□□
         □□∨□
@@ -323,9 +314,8 @@ def test_long_notes_complex_case():
     compare_chart_notes(chart, expected)
 
 
-def test_circle_free():
-    chart = \
-        """
+def test_circle_free() -> None:
+    chart = """
         #holdbyarrow=1
         #circlefree=1
         □□□□

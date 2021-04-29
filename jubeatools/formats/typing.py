@@ -1,8 +1,15 @@
-from typing import Any, Dict, Callable
+from typing import Any, Callable, Dict, Protocol
 
-from pathlib import Path
+from path import Path
 
 from jubeatools.song import Song
 
 
-Dumper = Callable[[Song, Path], Dict[Path, bytes]]
+class Dumper(Protocol):
+    def __call__(self, song: Song, path: Path, **kwargs: Any) -> Dict[Path, bytes]:
+        ...
+
+
+# Loaders deserialize a Path to a Song object
+# The Path can be a file or a folder depending on the format
+Loader = Callable[[Path], Song]

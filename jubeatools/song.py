@@ -12,10 +12,10 @@ from dataclasses import astuple, dataclass, field
 from decimal import Decimal
 from fractions import Fraction
 from functools import wraps
-from typing import Iterator, List, Mapping, Optional, Type, Union
+from pathlib import Path
+from typing import Any, Callable, Iterator, List, Mapping, Optional, Type, Union
 
 from multidict import MultiDict
-from pathlib import Path
 
 BeatsTime = Fraction
 SecondsTime = Decimal
@@ -27,9 +27,11 @@ def beats_time_from_ticks(ticks: int, resolution: int) -> BeatsTime:
     return BeatsTime(ticks, resolution)
 
 
-def convert_other(f):
+def convert_other(
+    f: Callable[[NotePosition, NotePosition], NotePosition]
+) -> Callable[[NotePosition, Any], NotePosition]:
     @wraps(f)
-    def wrapped(self, other):
+    def wrapped(self: NotePosition, other: Any) -> NotePosition:
         if isinstance(other, NotePosition):
             other_note = other
         else:
@@ -50,11 +52,11 @@ class NotePosition:
     x: int
     y: int
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[int]:
         yield from astuple(self)
 
     @property
-    def index(self):
+    def index(self) -> int:
         return self.x + 4 * self.y
 
     @classmethod
@@ -65,11 +67,11 @@ class NotePosition:
         return cls(x=index % 4, y=index // 4)
 
     @convert_other
-    def __add__(self, other):
+    def __add__(self, other: NotePosition) -> NotePosition:
         return NotePosition(self.x + other.x, self.y + other.y)
 
     @convert_other
-    def __sub__(self, other):
+    def __sub__(self, other: NotePosition) -> NotePosition:
         return NotePosition(self.x - other.x, self.y - other.y)
 
 
@@ -139,10 +141,10 @@ class Preview:
 
 @dataclass
 class Metadata:
-    title: str
-    artist: str
-    audio: Path
-    cover: Path
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    audio: Optional[Path] = None
+    cover: Optional[Path] = None
     preview: Optional[Preview] = None
     preview_file: Optional[Path] = None
 

@@ -6,10 +6,10 @@ from fractions import Fraction
 from functools import partial
 from io import StringIO
 from itertools import chain
+from pathlib import Path
 from typing import Dict, Iterator, List, Mapping, Optional, Tuple
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
-from pathlib import Path
 from sortedcontainers import SortedKeyList
 
 from jubeatools import __version__
@@ -107,7 +107,7 @@ class MonoColumnDumpedSection(JubeatAnalyserDumpedSection):
 
 def _raise_if_unfit_for_mono_column(
     chart: Chart, timing: Timing, circle_free: bool = False
-):
+) -> None:
     if len(timing.events) < 1:
         raise ValueError("No BPM found in file") from None
 
@@ -180,11 +180,7 @@ def _dump_mono_column_internal(song: Song, circle_free: bool) -> List[ChartFile]
         timing = chart.timing or song.global_timing
         assert timing is not None
         contents = _dump_mono_column_chart(
-            difficulty,
-            chart,
-            song.metadata,
-            timing,
-            circle_free,
+            difficulty, chart, song.metadata, timing, circle_free,
         )
         files.append(ChartFile(contents, song, difficulty, chart))
 

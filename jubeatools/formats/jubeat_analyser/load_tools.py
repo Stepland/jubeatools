@@ -6,10 +6,21 @@ from copy import deepcopy
 from dataclasses import astuple, dataclass
 from decimal import Decimal
 from itertools import product, zip_longest
-from typing import Dict, Iterator, List, Optional, Set, Tuple, AbstractSet
+from typing import (
+    AbstractSet,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
+from parsimonious.nodes import Node
 
 from jubeatools.song import BeatsTime, BPMEvent, LongNote, NotePosition
 
@@ -79,27 +90,31 @@ class DoubleColumnChartLine:
     position: str
     timing: Optional[str]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.position} |{self.timing}|"
 
 
 class DoubleColumnChartLineVisitor(NodeVisitor):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.pos_part = None
-        self.time_part = None
+        self.pos_part: Optional[str] = None
+        self.time_part: Optional[str] = None
 
-    def visit_line(self, node, visited_children):
+    def visit_line(
+        self, node: Node, visited_children: List[Node]
+    ) -> DoubleColumnChartLine:
+        if self.pos_part is None:
+            raise ValueError("No positional part found after parsing line")
         return DoubleColumnChartLine(self.pos_part, self.time_part)
 
-    def visit_position_part(self, node, visited_children):
+    def visit_position_part(self, node: Node, visited_children: List[Node]) -> None:
         self.pos_part = node.text
 
-    def visit_timing_part(self, node, visited_children):
+    def visit_timing_part(self, node: Node, visited_children: List[Node]) -> None:
         _, time_part, _ = node.children
         self.time_part = time_part.text
 
-    def generic_visit(self, node, visited_children):
+    def generic_visit(self, node: Node, visited_children: List[Node]) -> None:
         ...
 
 
@@ -113,9 +128,7 @@ def is_double_column_chart_line(line: str) -> bool:
 
 
 def parse_double_column_chart_line(line: str) -> DoubleColumnChartLine:
-    return DoubleColumnChartLineVisitor().visit(
-        double_column_chart_line_grammar.parse(line)
-    )
+    return DoubleColumnChartLineVisitor().visit(double_column_chart_line_grammar.parse(line))  # type: ignore
 
 
 def is_empty_line(line: str) -> bool:
@@ -164,7 +177,9 @@ class UnfinishedLongNote:
 
 
 def find_long_note_candidates(
-    bloc: List[List[str]], note_symbols: AbstractSet[str], should_skip: AbstractSet[NotePosition]
+    bloc: List[List[str]],
+    note_symbols: AbstractSet[str],
+    should_skip: AbstractSet[NotePosition],
 ) -> Dict[NotePosition, Set[NotePosition]]:
     "Return a dict of arrow position to landing note candidates"
     arrow_to_note_candidates: Dict[NotePosition, Set[NotePosition]] = {}
@@ -195,10 +210,13 @@ def find_long_note_candidates(
     return arrow_to_note_candidates
 
 
+Solution = Dict[NotePosition, NotePosition]
+Candidates = Dict[NotePosition, Set[NotePosition]]
+
+
 def pick_correct_long_note_candidates(
-    arrow_to_note_candidates: Dict[NotePosition, Set[NotePosition]],
-    bloc: List[List[str]],
-) -> Dict[NotePosition, NotePosition]:
+    arrow_to_note_candidates: Candidates, bloc: List[List[str]],
+) -> Solution:
     """Believe it or not, assigning each arrow to a valid note candidate
     involves whipping out a CSP solver.
     Returns an arrow_pos -> note_pos mapping
@@ -207,7 +225,7 @@ def pick_correct_long_note_candidates(
     for arrow_pos, note_candidates in arrow_to_note_candidates.items():
         problem.addVariable(arrow_pos, list(note_candidates))
     problem.addConstraint(constraint.AllDifferentConstraint())
-    solutions = problem.getSolutions()
+    solutions: List[Solution] = problem.getSolutions()
     if not solutions:
         raise SyntaxError(
             "Invalid long note arrow pattern in bloc :\n"
@@ -230,14 +248,12 @@ def note_distance(a: NotePosition, b: NotePosition) -> float:
     return abs(complex(*astuple(a)) - complex(*astuple(b)))
 
 
-def long_note_solution_heuristic(
-    solution: Dict[NotePosition, NotePosition]
-) -> Tuple[int, int, int]:
+def long_note_solution_heuristic(solution: Solution) -> Tuple[int, int, int]:
     c = Counter(int(note_distance(k, v)) for k, v in solution.items())
     return (c[3], c[2], c[1])
 
 
-def is_simple_solution(solution, domains) -> bool:
+def is_simple_solution(solution: Solution, domains: Candidates) -> bool:
     return all(
         solution[v] == min(domains[v], key=lambda e: note_distance(e, v))
         for v in solution.keys()
@@ -245,26 +261,25 @@ def is_simple_solution(solution, domains) -> bool:
 
 
 class JubeatAnalyserParser:
-    def __init__(self):
-        self.music = None
+    def __init__(self) -> None:
+        self.music: Optional[str] = None
         self.symbols = deepcopy(SYMBOL_TO_DECIMAL_TIME)
         self.section_starting_beat = Decimal("0")
-        self.current_tempo = None
-        self.current_chart_lines = []
-        self.timing_events = []
+        self.current_tempo = Decimal(120)
+        self.timing_events: List[BPMEvent] = []
         self.offset = 0
-        self.beats_per_section = 4
+        self.beats_per_section = Decimal(4)
         self.bytes_per_panel = 2
         self.level = 1
-        self.difficulty = None
-        self.title = None
-        self.artist = None
-        self.jacket = None
-        self.preview_start = None
+        self.difficulty: Optional[str] = None
+        self.title: Optional[str] = None
+        self.artist: Optional[str] = None
+        self.jacket: Optional[str] = None
+        self.preview_start: Optional[int] = None
         self.hold_by_arrow = False
         self.circle_free = False
 
-    def handle_command(self, command, value=None):
+    def handle_command(self, command: str, value: Optional[str] = None) -> None:
         try:
             method = getattr(self, f"do_{command}")
         except AttributeError:
@@ -275,55 +290,53 @@ class JubeatAnalyserParser:
         else:
             method()
 
-    def do_b(self, value):
+    def do_b(self, value: str) -> None:
         self.beats_per_section = Decimal(value)
 
-    def do_m(self, value):
+    def do_m(self, value: str) -> None:
         self.music = value
 
-    def do_o(self, value):
+    def do_o(self, value: str) -> None:
         self.offset = int(value)
 
-    def do_r(self, value):
+    def do_r(self, value: str) -> None:
         self.offset += int(value)
 
-    def do_t(self, value):
+    def do_t(self, value: str) -> None:
         self.current_tempo = Decimal(value)
         self.timing_events.append(
-            BPMEvent(self.section_starting_beat, BPM=self.current_tempo)
+            BPMEvent(BeatsTime(self.section_starting_beat), BPM=self.current_tempo,)
         )
 
-    def do_pw(self, value):
+    def do_pw(self, value: str) -> None:
         if int(value) != 4:
             raise ValueError("jubeatools only supports 4×4 charts")
 
     do_ph = do_pw
 
-    def do_lev(self, value):
+    def do_lev(self, value: str) -> None:
         self.level = int(value)
 
-    def do_dif(self, value):
+    def do_dif(self, value: str) -> None:
         dif = int(value)
-        if dif <= 0:
-            raise ValueError(f"Unknown chart difficulty : {dif}")
         if dif < 4:
             self.difficulty = DIFFICULTIES[dif]
         else:
-            self.difficulty = f"EDIT-{dif-3}"
+            self.difficulty = f"EDIT"
 
-    def do_title(self, value):
+    def do_title(self, value: str) -> None:
         self.title = value
 
-    def do_artist(self, value):
+    def do_artist(self, value: str) -> None:
         self.artist = value
 
-    def do_jacket(self, value):
+    def do_jacket(self, value: str) -> None:
         self.jacket = value
 
-    def do_prevpos(self, value):
+    def do_prevpos(self, value: str) -> None:
         self.preview_start = int(value)
 
-    def _do_bpp(self, value):
+    def _do_bpp(self, value: Union[int, str]) -> None:
         bpp = int(value)
         if bpp not in (1, 2):
             raise ValueError(f"Unexcpected bpp value : {value}")
@@ -332,20 +345,38 @@ class JubeatAnalyserParser:
         else:
             self.bytes_per_panel = int(value)
 
-    def do_holdbyarrow(self, value):
+    def do_holdbyarrow(self, value: str) -> None:
         self.hold_by_arrow = int(value) == 1
 
-    def do_holdbytilde(self, value):
+    def do_holdbytilde(self, value: str) -> None:
         if int(value):
             raise ValueError("jubeatools does not support #holdbytilde")
 
-    def do_circlefree(self, raw_value):
+    def do_circlefree(self, raw_value: str) -> None:
         activate = bool(int(raw_value))
         if activate and self.bytes_per_panel != 2:
             raise ValueError("#circlefree can only be activated when #bpp=2")
         self.circle_free = activate
 
-    def define_symbol(self, symbol: str, timing: Decimal):
+    def _wrong_format(self, f: str) -> None:
+        raise ValueError(
+            f"{f} command indicates this file uses another jubeat analyser "
+            "format than the one the currently selected parser is designed for"
+        )
+
+    def do_memo(self) -> None:
+        self._wrong_format("#memo")
+
+    def do_memo1(self) -> None:
+        self._wrong_format("#memo1")
+
+    def do_boogie(self) -> None:
+        self._wrong_format("#boogie")
+
+    def do_memo2(self) -> None:
+        self._wrong_format("#memo2")
+
+    def define_symbol(self, symbol: str, timing: Decimal) -> None:
         bpp = self.bytes_per_panel
         length_as_shift_jis = len(symbol.encode("shift-jis-2004"))
         if length_as_shift_jis != bpp:
@@ -364,13 +395,19 @@ class JubeatAnalyserParser:
     def is_short_line(self, line: str) -> bool:
         return len(line.encode("shift-jis-2004")) < self.bytes_per_panel * 4
 
+    def _split_chart_line(self, line: str) -> List[str]:
+        if self.bytes_per_panel == 2:
+            return split_double_byte_line(line)
+        else:
+            return list(line)
+
 
 @dataclass
 class DoubleColumnFrame:
     position_part: List[List[str]]
     timing_part: List[List[str]]
 
-    def __str__(self):
+    def __str__(self) -> str:
         res = []
         for pos, time in zip_longest(self.position_part, self.timing_part):
             line = [f"{''.join(pos)}"]
