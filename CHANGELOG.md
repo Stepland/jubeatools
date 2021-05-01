@@ -3,6 +3,7 @@
 - jubeat analyser : Use "EXT" instead of "?" as the fallback difficulty name when loading
 ## Fixed
 - memon : Fix TypeError that would occur when trying to convert to memon
+- #memo2 : Fix #memo2 rendering missing blank lines between blocks, while technically still valid files, this made #memo2 files rendered by jubeatools absolutely fugly and very NOT human friendly
 
 # v0.1.2
 ## Fixed

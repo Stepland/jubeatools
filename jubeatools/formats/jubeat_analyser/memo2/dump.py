@@ -328,9 +328,12 @@ def _dump_memo2_chart(
 
     file.write(dump_command("memo2") + "\n")
 
+    file.write("\n")
+
     # Notes
-    for _, section in sections.items():
-        file.write(section.render(circle_free) + "\n")
+    file.write(
+        "\n\n".join(section.render(circle_free) for _, section in sections.items())
+    )
 
     return file
 

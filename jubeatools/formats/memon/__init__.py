@@ -274,9 +274,7 @@ def _raise_if_unfit_for_v0(song: Song, version: str) -> None:
         raise ValueError("The song has no timing information")
 
     chart_timings = [
-        chart.timing
-        for chart in song.charts.values()
-        if chart.timing is not None
+        chart.timing for chart in song.charts.values() if chart.timing is not None
     ]
 
     if chart_timings:
