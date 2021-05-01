@@ -312,7 +312,7 @@ def _load_memo1_file(lines: List[str]) -> Song:
     )
     charts = {
         parser.difficulty
-        or "?": Chart(
+        or "EXT": Chart(
             level=Decimal(parser.level),
             timing=timing,
             notes=sorted(parser.notes(), key=lambda n: (n.time, n.position)),

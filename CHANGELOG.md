@@ -1,4 +1,6 @@
 # v0.1.3
+## Changed
+- jubeat analyser : Use "EXT" instead of "?" as the fallback difficulty name when loading
 ## Fixed
 - memon : Fix TypeError that would occur when trying to convert to memon
 
