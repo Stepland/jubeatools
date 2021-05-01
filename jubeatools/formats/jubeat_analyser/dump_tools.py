@@ -82,9 +82,8 @@ DIRECTION_TO_LINE = {
 DIFFICULTIES = {"BSC": 1, "ADV": 2, "EXT": 3}
 
 # I put a FUCKTON of extra characters just in case some insane chart uses
-# loads of unusual beat divisions
-# The Vs are left out on purpose since they would be mistaken for long note
-# arrows
+# loads of unusual beat divisions. The Vs are left out on purpose since they
+# would be mistaken for long note arrows
 DEFAULT_EXTRA_SYMBOLS = (
     "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＷＸＹＺ"
     "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｗｘｙｚ"
