@@ -25,6 +25,7 @@ black = "^19.10b0"
 hypothesis = "^6.10.1"
 mypy = "^0.812"
 isort = "^4.3.21"
+toml = "^0.10.2"
 
 [tool.poetry.scripts]
 jubeatools = 'jubeatools.cli:convert'
