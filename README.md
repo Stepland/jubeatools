@@ -1,9 +1,19 @@
 # Jubeatools
-A toolbox for jubeat file formats
+A toolbox to convert between jubeat file formats
 
-## Conversion
-jubeatools supports the following formats :
+## How to install
+```sh
+pip install jubeatools
+```
 
+You need Python 3.8 or greater
+
+## How to use
+```sh
+jubeatools ${source} ${destination} -f ${output format} (... format specific options)
+```
+
+## Which formats are supported
 ### Memon
 |        | input | output |
 |--------|:-----:|:------:|
