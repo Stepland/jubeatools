@@ -7,6 +7,7 @@ Most timing-related info is stored as beat fractions,
 otherwise a decimal number of seconds is used
 """
 from __future__ import annotations
+
 from collections import UserList, namedtuple
 from dataclasses import astuple, dataclass, field
 from decimal import Decimal

@@ -1,5 +1,6 @@
-from jubeatools.song import TapNote, LongNote, NotePosition
 from fractions import Fraction
+
+from jubeatools.song import LongNote, NotePosition, TapNote
 
 notes = {
     TapNote(time=Fraction(0, 1), position=NotePosition(x=0, y=0)),

@@ -3,8 +3,10 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Set, Union
 
-from hypothesis import given, example
+from hypothesis import example, given
 
+from jubeatools.formats.jubeat_analyser.memo.dump import _dump_memo_chart
+from jubeatools.formats.jubeat_analyser.memo.load import MemoParser
 from jubeatools.song import (
     BeatsTime,
     BPMEvent,
@@ -18,8 +20,6 @@ from jubeatools.song import (
 )
 from jubeatools.testutils.strategies import NoteOption
 from jubeatools.testutils.strategies import notes as notes_strat
-from jubeatools.formats.jubeat_analyser.memo.dump import _dump_memo_chart
-from jubeatools.formats.jubeat_analyser.memo.load import MemoParser
 
 from . import example1
 

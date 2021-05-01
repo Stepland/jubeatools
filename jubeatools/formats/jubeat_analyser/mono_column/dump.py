@@ -12,7 +12,6 @@ from typing import Dict, Iterator, List, Mapping, Optional, Tuple
 from more_itertools import collapse, intersperse, mark_ends, windowed
 from sortedcontainers import SortedKeyList
 
-from jubeatools import __version__
 from jubeatools.formats.filetypes import ChartFile, JubeatFile
 from jubeatools.song import (
     BeatsTime,
@@ -24,6 +23,7 @@ from jubeatools.song import (
     TapNote,
     Timing,
 )
+from jubeatools.version import __version__
 
 from ..dump_tools import (
     BEATS_TIME_TO_SYMBOL,
