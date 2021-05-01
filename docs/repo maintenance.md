@@ -26,5 +26,5 @@ while still being in the repo's root :
 1. (If you did not use `--commit`)
     - Commit the version-bumped files
     - Add a tag with the format `vX.Y.Z` (don't forget the `v` at the start)
-1. Push the version bump commit
+1. Push the version bump commit and the tag
 1. Build & publish <br> `$ poetry publish --build`
