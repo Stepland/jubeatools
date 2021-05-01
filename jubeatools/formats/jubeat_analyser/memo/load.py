@@ -136,7 +136,7 @@ class MemoParser(JubeatAnalyserParser):
     def _push_section(self) -> None:
         self.sections.append(
             MemoLoadedSection(
-                frames=deepcopy(self.frames),
+                frames=self.frames,
                 symbols=deepcopy(self.symbols),
                 length=self.beats_per_section,
                 tempo=self.current_tempo,

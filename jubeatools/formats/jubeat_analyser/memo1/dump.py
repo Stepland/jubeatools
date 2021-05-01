@@ -118,7 +118,7 @@ class Memo1DumpedSection(JubeatAnalyserDumpedSection):
                 time_in_section = note.time - self.current_beat
                 time_in_bar = time_in_section % Fraction(1)
                 time_index = time_in_bar.numerator * (
-                    bar_length // time_in_bar.numerator
+                    bar_length // time_in_bar.denominator
                 )
                 if time_index not in bar_dict:
                     symbol = next(symbols_iterator)
