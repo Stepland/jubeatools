@@ -1,3 +1,7 @@
+# v0.1.3
+## Fixed
+- memon : Fix TypeError that would occur when trying to convert to memon
+
 # v0.1.2
 ## Fixed
 - jubeat analyser

@@ -268,21 +268,25 @@ def _raise_if_unfit_for_v0(song: Song, version: str) -> None:
     """Raises an exception if the Song object is ill-formed or contains information
     that cannot be represented in a memon v0.x.y file (includes legacy)"""
 
-    if (
-        len(set(chart.timing for chart in song.charts.values() if chart is not None))
-        > 1
-    ):
-        raise ValueError(
-            f"memon:{version} cannot represent a song with per-chart timing"
-        )
-
     if song.global_timing is None and all(
         chart.timing is None for chart in song.charts.values()
     ):
         raise ValueError("The song has no timing information")
 
-    timing = _get_timing(song)
+    chart_timings = [
+        chart.timing
+        for chart in song.charts.values()
+        if chart.timing is not None
+    ]
 
+    if chart_timings:
+        first_one = chart_timings[0]
+        if any(t != first_one for t in chart_timings):
+            raise ValueError(
+                f"memon:{version} cannot represent a song with per-chart timing"
+            )
+
+    timing = _get_timing(song)
     number_of_timing_events = len(timing.events)
     if number_of_timing_events != 1:
         if number_of_timing_events == 0:
