@@ -1,9 +1,9 @@
 from decimal import Decimal
 from fractions import Fraction
 from pathlib import Path
-from typing import List, Union
+from typing import Set, Union
 
-from hypothesis import given
+from hypothesis import given, example
 
 from jubeatools.song import (
     BeatsTime,
@@ -18,13 +18,15 @@ from jubeatools.song import (
 )
 from jubeatools.testutils.strategies import NoteOption
 from jubeatools.testutils.strategies import notes as notes_strat
+from jubeatools.formats.jubeat_analyser.memo.dump import _dump_memo_chart
+from jubeatools.formats.jubeat_analyser.memo.load import MemoParser
 
-from ..memo.dump import _dump_memo_chart
-from ..memo.load import MemoParser
+from . import example1
 
 
 @given(notes_strat(NoteOption.LONGS))
-def test_many_notes(notes: List[Union[TapNote, LongNote]]) -> None:
+@example(example1.notes)
+def test_many_notes(notes: Set[Union[TapNote, LongNote]]) -> None:
     timing = Timing(
         events=[BPMEvent(BeatsTime(0), Decimal(120))], beat_zero_offset=SecondsTime(0)
     )
