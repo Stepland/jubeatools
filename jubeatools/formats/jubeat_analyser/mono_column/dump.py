@@ -55,7 +55,10 @@ class MonoColumnDumpedSection(JubeatAnalyserDumpedSection):
             blocs.append(notes)
         return "\n".join(collapse([intersperse("", blocs), "--"]))
 
-    def _dump_notes(self, circle_free: bool = False,) -> Iterator[str]:
+    def _dump_notes(
+        self,
+        circle_free: bool = False,
+    ) -> Iterator[str]:
         frames: List[Dict[NotePosition, str]] = []
         frame: Dict[NotePosition, str] = {}
         for note in self.notes:
@@ -180,7 +183,11 @@ def _dump_mono_column_internal(song: Song, circle_free: bool) -> List[ChartFile]
         timing = chart.timing or song.global_timing
         assert timing is not None
         contents = _dump_mono_column_chart(
-            difficulty, chart, song.metadata, timing, circle_free,
+            difficulty,
+            chart,
+            song.metadata,
+            timing,
+            circle_free,
         )
         files.append(ChartFile(contents, song, difficulty, chart))
 

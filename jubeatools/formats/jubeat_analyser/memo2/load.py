@@ -179,6 +179,9 @@ class Memo2Frame:
 
 
 class Memo2Parser(JubeatAnalyserParser):
+
+    FORMAT_TAG = "#memo2"
+
     def __init__(self) -> None:
         super().__init__()
         self.current_chart_lines: List[Memo2ChartLine] = []
@@ -302,6 +305,7 @@ class Memo2Parser(JubeatAnalyserParser):
 
     def load_line(self, raw_line: str) -> None:
         line = raw_line.strip()
+        self.raise_if_separator(line, self.FORMAT_TAG)
         if is_command(line):
             command, value = parse_command(line)
             self.handle_command(command, value)
@@ -319,7 +323,9 @@ class Memo2Parser(JubeatAnalyserParser):
         else:
             yield from self._iter_notes_without_longs()
 
-    def _iter_frames(self,) -> Iterator[Tuple[Mapping[str, BeatsTime], Memo2Frame]]:
+    def _iter_frames(
+        self,
+    ) -> Iterator[Tuple[Mapping[str, BeatsTime], Memo2Frame]]:
         """iterate over tuples of (currently_defined_symbols, frame)"""
         local_symbols = {}
         frame_starting_beat = BeatsTime(0)
@@ -376,7 +382,8 @@ class Memo2Parser(JubeatAnalyserParser):
             )
             if arrow_to_note_candidates:
                 solution = pick_correct_long_note_candidates(
-                    arrow_to_note_candidates, frame.position_part,
+                    arrow_to_note_candidates,
+                    frame.position_part,
                 )
                 for arrow_pos, note_pos in solution.items():
                     should_skip.add(arrow_pos)

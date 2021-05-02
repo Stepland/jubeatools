@@ -344,7 +344,11 @@ def _dump_memo2_internal(song: Song, circle_free: bool = False) -> List[ChartFil
         timing = chart.timing or song.global_timing
         assert timing is not None
         contents = _dump_memo2_chart(
-            difficulty, chart, song.metadata, timing, circle_free,
+            difficulty,
+            chart,
+            song.metadata,
+            timing,
+            circle_free,
         )
         files.append(ChartFile(contents, song, difficulty, chart))
 

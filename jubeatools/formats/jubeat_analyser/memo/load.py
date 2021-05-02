@@ -81,6 +81,9 @@ class MemoLoadedSection:
 
 
 class MemoParser(JubeatAnalyserParser):
+
+    FORMAT_TAG = "#memo"
+
     def __init__(self) -> None:
         super().__init__()
         self.current_chart_lines: List[DoubleColumnChartLine] = []
@@ -153,6 +156,7 @@ class MemoParser(JubeatAnalyserParser):
 
     def load_line(self, raw_line: str) -> None:
         line = raw_line.strip()
+        self.raise_if_separator(line, self.FORMAT_TAG)
         if is_command(line):
             command, value = parse_command(line)
             self.handle_command(command, value)
@@ -241,7 +245,8 @@ class MemoParser(JubeatAnalyserParser):
             )
             if arrow_to_note_candidates:
                 solution = pick_correct_long_note_candidates(
-                    arrow_to_note_candidates, frame.position_part,
+                    arrow_to_note_candidates,
+                    frame.position_part,
                 )
                 for arrow_pos, note_pos in solution.items():
                     should_skip.add(arrow_pos)
@@ -291,9 +296,7 @@ def _load_memo_file(lines: List[str]) -> Song:
         try:
             parser.load_line(raw_line)
         except Exception as e:
-            raise SyntaxError(
-                f"Error while parsing memo line {i} :\n" f"{type(e).__name__}: {e}"
-            ) from None
+            raise SyntaxError(f"On line {i}\n{e}") from None
 
     parser.finish_last_few_notes()
     metadata = Metadata(

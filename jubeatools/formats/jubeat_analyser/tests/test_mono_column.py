@@ -265,7 +265,10 @@ def test_long_notes_ambiguous_case() -> None:
         """
     expected = [
         LongNote(BeatsTime(0), NotePosition(x, y), BeatsTime(4), NotePosition(tx, ty))
-        for (x, y), (tx, ty) in [((0, 0), (2, 0)), ((1, 0), (3, 0)),]
+        for (x, y), (tx, ty) in [
+            ((0, 0), (2, 0)),
+            ((1, 0), (3, 0)),
+        ]
     ]
     with pytest.warns(UserWarning):
         compare_chart_notes(chart, expected)
@@ -288,7 +291,10 @@ def test_long_notes_simple_solution_no_warning() -> None:
         """
     expected = [
         LongNote(BeatsTime(0), NotePosition(x, y), BeatsTime(4), NotePosition(tx, ty))
-        for (x, y), (tx, ty) in [((1, 1), (0, 1)), ((2, 1), (3, 1)),]
+        for (x, y), (tx, ty) in [
+            ((1, 1), (0, 1)),
+            ((2, 1), (3, 1)),
+        ]
     ]
     compare_chart_notes(chart, expected)
 
@@ -309,7 +315,11 @@ def test_long_notes_complex_case() -> None:
         """
     expected = [
         LongNote(BeatsTime(0), NotePosition(x, y), BeatsTime(4), NotePosition(tx, ty))
-        for (x, y), (tx, ty) in [((1, 3), (1, 2)), ((2, 3), (2, 1)), ((3, 3), (0, 3)),]
+        for (x, y), (tx, ty) in [
+            ((1, 3), (1, 2)),
+            ((2, 3), (2, 1)),
+            ((3, 3), (0, 3)),
+        ]
     ]
     compare_chart_notes(chart, expected)
 

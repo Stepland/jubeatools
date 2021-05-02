@@ -1,3 +1,7 @@
+# Unreleased
+## Fixed
+- [jubeat-analyser] Raise exception earlier when a mono-column file is detected by the other #memo parsers (based on "--" separator lines)
+
 # v0.1.3
 ## Changed
 - [jubeat-analyser] Use "EXT" instead of "?" as the fallback difficulty name when loading

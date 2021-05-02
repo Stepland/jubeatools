@@ -160,7 +160,10 @@ def bpm_change(draw: DrawFunc) -> BPMEvent:
 
 
 @st.composite
-def timing_info(draw: DrawFunc, bpm_changes: bool = True,) -> Timing:
+def timing_info(
+    draw: DrawFunc,
+    bpm_changes: bool = True,
+) -> Timing:
     first_bpm = draw(bpm_strat())
     first_event = BPMEvent(BeatsTime(0), first_bpm)
     events = [first_event]

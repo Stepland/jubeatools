@@ -40,6 +40,7 @@ from ..load_tools import (
     decimal_to_beats,
     find_long_note_candidates,
     is_empty_line,
+    is_separator,
     is_simple_solution,
     long_note_solution_heuristic,
     pick_correct_long_note_candidates,
@@ -78,13 +79,6 @@ def is_mono_column_chart_line(line: str) -> bool:
 
 def parse_mono_column_chart_line(line: str) -> str:
     return MonoColumnChartLineVisitor().visit(mono_column_chart_line_grammar.parse(line))  # type: ignore
-
-
-SEPARATOR = re.compile(r"--.*")
-
-
-def is_separator(line: str) -> bool:
-    return bool(SEPARATOR.match(line))
 
 
 SYMBOL_TO_DECIMAL_TIME = {
@@ -151,6 +145,10 @@ class MonoColumnParser(JubeatAnalyserParser):
             self.section_starting_beat += self.beats_per_section
 
     def append_chart_line(self, line: str) -> None:
+        expected_length = 4 * self.bytes_per_panel
+        actual_length = len(line.encode("shift-jis-2004"))
+        if actual_length != expected_length:
+            raise SyntaxError(f"Invalid chart line. Since for ")
         if self.bytes_per_panel == 1 and len(line) != 4:
             raise SyntaxError(f"Invalid chart line for #bpp=1 : {line}")
         elif self.bytes_per_panel == 2 and len(line.encode("shift-jis-2004")) != 8:
@@ -229,7 +227,8 @@ class MonoColumnParser(JubeatAnalyserParser):
             )
             if arrow_to_note_candidates:
                 solution = pick_correct_long_note_candidates(
-                    arrow_to_note_candidates, bloc,
+                    arrow_to_note_candidates,
+                    bloc,
                 )
                 for arrow_pos, note_pos in solution.items():
                     should_skip.add(arrow_pos)

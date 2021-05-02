@@ -74,6 +74,13 @@ EMPTY_BEAT_SYMBOLS = {
 }
 
 
+SEPARATOR = re.compile(r"--.*")
+
+
+def is_separator(line: str) -> bool:
+    return bool(SEPARATOR.match(line))
+
+
 double_column_chart_line_grammar = Grammar(
     r"""
     line            = ws position_part ws (timing_part ws)? comment?
@@ -102,9 +109,9 @@ class DoubleColumnChartLine:
         actual_length = len(self.position.encode("shift-jis-2004"))
         if expected_length != actual_length:
             raise SyntaxError(
-                f"Invalid position part. Since #bpp={bytes_per_panel}, the \
-                position part of a line should be {expected_length} bytes long, \
-                but {self.position!r} is {actual_length} bytes long"
+                f"Invalid position part. Since #bpp={bytes_per_panel}, the "
+                f"position part of a line should be {expected_length} bytes long, "
+                f"but {self.position!r} is {actual_length} bytes long"
             )
 
     def raise_if_timing_unfit(self, bytes_per_panel: int) -> None:
@@ -114,9 +121,9 @@ class DoubleColumnChartLine:
         length = len(self.timing.encode("shift-jis-2004"))
         if length % bytes_per_panel != 0:
             raise SyntaxError(
-                f"Invalid timing part. Since #bpp={bytes_per_panel}, the timing \
-                part of a line should be divisible by {bytes_per_panel}, but \
-                {self.timing!r} is {length} bytes long so it's not"
+                f"Invalid timing part. Since #bpp={bytes_per_panel}, the timing "
+                f"part of a line should be divisible by {bytes_per_panel}, but "
+                f"{self.timing!r} is {length} bytes long so it's not"
             )
 
 
@@ -245,7 +252,8 @@ Candidates = Dict[NotePosition, Set[NotePosition]]
 
 
 def pick_correct_long_note_candidates(
-    arrow_to_note_candidates: Candidates, bloc: List[List[str]],
+    arrow_to_note_candidates: Candidates,
+    bloc: List[List[str]],
 ) -> Solution:
     """Believe it or not, assigning each arrow to a valid note candidate
     involves whipping out a CSP solver.
@@ -335,7 +343,10 @@ class JubeatAnalyserParser:
     def do_t(self, value: str) -> None:
         self.current_tempo = Decimal(value)
         self.timing_events.append(
-            BPMEvent(BeatsTime(self.section_starting_beat), BPM=self.current_tempo,)
+            BPMEvent(
+                BeatsTime(self.section_starting_beat),
+                BPM=self.current_tempo,
+            )
         )
 
     def do_pw(self, value: str) -> None:
@@ -410,14 +421,14 @@ class JubeatAnalyserParser:
         length_as_shift_jis = len(symbol.encode("shift-jis-2004"))
         if length_as_shift_jis != bpp:
             raise ValueError(
-                f"Invalid symbol definition. Since #bpp={bpp}, timing symbols \
-                should be {bpp} bytes long but '{symbol}' is {length_as_shift_jis}"
+                f"Invalid symbol definition. Since #bpp={bpp}, timing symbols "
+                f"should be {bpp} bytes long but '{symbol}' is {length_as_shift_jis}"
             )
         if timing > self.beats_per_section:
             raise ValueError(
-                f"Invalid symbol definition. Since sections only last \
-                {self.beats_per_section} beats, a symbol cannot happen \
-                afterwards at {timing}"
+                f"Invalid symbol definition. Since sections only last "
+                f"{self.beats_per_section} beats, a symbol cannot happen "
+                f"afterwards at {timing}"
             )
         self.symbols[symbol] = timing
 
@@ -429,6 +440,14 @@ class JubeatAnalyserParser:
             return split_double_byte_line(line)
         else:
             return list(line)
+
+    def raise_if_separator(self, line: str, format_: str) -> None:
+        if is_separator(line):
+            raise SyntaxError(
+                'Found a separator line (starting with "--") but the file '
+                f"indicates it's using {format_} format, if the file is actually "
+                f"in mono-column format (1列形式) there should be no {format_} line"
+            )
 
 
 @dataclass
