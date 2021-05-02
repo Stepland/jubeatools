@@ -99,7 +99,9 @@ def parse_command(line: str) -> Tuple[str, Optional[str]]:
         return CommandVisitor().visit(command_grammar.parse(line))  # type: ignore
     except ParseError:
         if line.strip()[0] == "#":
-            raise ParseError(f"Invalid command syntax : {line}") from None
+            raise ParseError(
+                "Line starts with '#' but it couldn't be parsed as a valid command"
+            ) from None
         else:
             raise
 

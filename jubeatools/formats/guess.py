@@ -37,7 +37,10 @@ def guess_memon_version(obj: Any) -> Format:
     except KeyError:
         return Format.MEMON_LEGACY
     except TypeError:
-        raise ValueError("Invalid JSON structure for memon file")
+        raise ValueError(
+            "This JSON file is not a correct memon file : the top-level "
+            "value is not an object"
+        )
 
     if version == "0.1.0":
         return Format.MEMON_0_1_0

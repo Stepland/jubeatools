@@ -55,18 +55,27 @@ class Frame:
     bars: Dict[int, Dict[int, str]] = field(default_factory=dict)
 
     def dump(self, length: Decimal) -> Iterator[str]:
-        # Check that bars are contiguous
-        for a, b in windowed(sorted(self.bars), 2):
-            if b is not None and a is not None and b - a != 1:
-                raise ValueError("Frame has discontinuous bars")
-        # Check all bars are in the same 4-bar group
-        if self.bars.keys() != set(bar % 4 for bar in self.bars):
-            raise ValueError("Frame contains bars from different 4-bar groups")
-
+        self.raise_if_unfit()
         for pos, bar in zip_longest(self.dump_positions(), self.dump_bars(length)):
             if bar is None:
                 bar = ""
             yield f"{pos} {bar}"
+
+    def raise_if_unfit(self) -> None:
+        if not self.bars_are_contiguous():
+            raise ValueError("Frame has discontinuous bars")
+        if not self.all_bars_are_from_the_same_group():
+            raise ValueError("Frame contains bars from different 4-bar groups")
+
+    def bars_are_contiguous(self) -> bool:
+        return all(
+            b - a == 1
+            for a, b in windowed(sorted(self.bars), 2)
+            if b is not None and a is not None
+        )
+
+    def all_bars_are_from_the_same_group(self) -> bool:
+        return self.bars.keys() == set(bar % 4 for bar in self.bars)
 
     def dump_positions(self) -> Iterator[str]:
         for y in range(4):
@@ -121,9 +130,7 @@ class MemoDumpedSection(JubeatAnalyserDumpedSection):
                     chosen_symbols[time_in_section] = symbol
                     bars[bar_index][time_index] = symbol
             elif time_in_section not in self.symbols:
-                raise ValueError(
-                    f"No symbol defined for time in section : {time_in_section}"
-                )
+                raise ValueError(f"No symbol defined for time : {time_in_section}")
 
         # Create frame by bar
         section_symbols = ChainMap(chosen_symbols, self.symbols)

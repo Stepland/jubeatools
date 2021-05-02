@@ -92,13 +92,7 @@ class Memo1Parser(JubeatAnalyserParser):
             self._do_bpp(value)
 
     def append_chart_line(self, line: DoubleColumnChartLine) -> None:
-        if len(line.position.encode("shift-jis-2004")) != 4 * self.bytes_per_panel:
-            raise SyntaxError(
-                f"Invalid chart line for #bpp={self.bytes_per_panel} : {line}"
-            )
-        if line.timing is not None and self.bytes_per_panel == 2:
-            if len(line.timing.encode("shift-jis-2004")) % 2 != 0:
-                raise SyntaxError(f"Invalid chart line for #bpp=2 : {line}")
+        line.raise_if_unfit(self.bytes_per_panel)
         self.current_chart_lines.append(line)
         if len(self.current_chart_lines) == 4:
             self._push_frame()

@@ -93,6 +93,32 @@ class DoubleColumnChartLine:
     def __str__(self) -> str:
         return f"{self.position} |{self.timing}|"
 
+    def raise_if_unfit(self, bytes_per_panel: int) -> None:
+        self.raise_if_position_unfit(bytes_per_panel)
+        self.raise_if_timing_unfit(bytes_per_panel)
+
+    def raise_if_position_unfit(self, bytes_per_panel: int) -> None:
+        expected_length = 4 * bytes_per_panel
+        actual_length = len(self.position.encode("shift-jis-2004"))
+        if expected_length != actual_length:
+            raise SyntaxError(
+                f"Invalid position part. Since #bpp={bytes_per_panel}, the \
+                position part of a line should be {expected_length} bytes long, \
+                but {self.position!r} is {actual_length} bytes long"
+            )
+
+    def raise_if_timing_unfit(self, bytes_per_panel: int) -> None:
+        if self.timing is None:
+            return
+
+        length = len(self.timing.encode("shift-jis-2004"))
+        if length % bytes_per_panel != 0:
+            raise SyntaxError(
+                f"Invalid timing part. Since #bpp={bytes_per_panel}, the timing \
+                part of a line should be divisible by {bytes_per_panel}, but \
+                {self.timing!r} is {length} bytes long so it's not"
+            )
+
 
 class DoubleColumnChartLineVisitor(NodeVisitor):
     def __init__(self) -> None:
@@ -145,7 +171,10 @@ def split_double_byte_line(line: str) -> List[str]:
     """
     encoded_line = line.encode("shift-jis-2004")
     if len(encoded_line) % 2 != 0:
-        raise ValueError(f"Invalid chart line : {line}")
+        raise ValueError(
+            "Line of odd length encountered while trying to split a double-byte "
+            f"line : {line!r}"
+        )
     symbols = []
     for i in range(0, len(encoded_line), 2):
         symbols.append(encoded_line[i : i + 2].decode("shift-jis-2004"))
@@ -166,7 +195,8 @@ class UnfinishedLongNote:
     def ends_at(self, end: BeatsTime) -> LongNote:
         if end < self.time:
             raise ValueError(
-                f"Invalid end time ({end}) for long note starting at {self.time}"
+                "Invalid end time. A long note starting at "
+                f"{self.time} cannot end at {end} (which is earlier)"
             )
         return LongNote(
             time=self.time,
@@ -228,7 +258,7 @@ def pick_correct_long_note_candidates(
     solutions: List[Solution] = problem.getSolutions()
     if not solutions:
         raise SyntaxError(
-            "Invalid long note arrow pattern in bloc :\n"
+            "Impossible arrow pattern found in block :\n"
             + "\n".join("".join(line) for line in bloc)
         )
     solution = min(solutions, key=long_note_solution_heuristic)
@@ -283,7 +313,7 @@ class JubeatAnalyserParser:
         try:
             method = getattr(self, f"do_{command}")
         except AttributeError:
-            raise SyntaxError(f"Unknown analyser command : {command}") from None
+            raise SyntaxError(f"Unknown jubeat analyser command : {command}") from None
 
         if value is not None:
             method(value)
@@ -341,7 +371,7 @@ class JubeatAnalyserParser:
         if bpp not in (1, 2):
             raise ValueError(f"Unexcpected bpp value : {value}")
         elif self.circle_free and bpp == 1:
-            raise ValueError("#bpp can only be 2 when #circlefree is activated")
+            raise ValueError("Can't set #bpp to 1 when #circlefree is on")
         else:
             self.bytes_per_panel = int(value)
 
@@ -349,18 +379,17 @@ class JubeatAnalyserParser:
         self.hold_by_arrow = int(value) == 1
 
     def do_holdbytilde(self, value: str) -> None:
-        if int(value):
-            raise ValueError("jubeatools does not support #holdbytilde")
+        raise NotImplementedError("jubeatools does not support #holdbytilde")
 
     def do_circlefree(self, raw_value: str) -> None:
         activate = bool(int(raw_value))
         if activate and self.bytes_per_panel != 2:
-            raise ValueError("#circlefree can only be activated when #bpp=2")
+            raise ValueError("#circlefree can only be on when #bpp=2")
         self.circle_free = activate
 
     def _wrong_format(self, f: str) -> None:
         raise ValueError(
-            f"{f} command indicates this file uses another jubeat analyser "
+            f"{f} command means that this file uses another jubeat analyser "
             "format than the one the currently selected parser is designed for"
         )
 
@@ -381,15 +410,15 @@ class JubeatAnalyserParser:
         length_as_shift_jis = len(symbol.encode("shift-jis-2004"))
         if length_as_shift_jis != bpp:
             raise ValueError(
-                f"Invalid symbol definition. Since #bpp={bpp}, timing symbols "
-                f"should be {bpp} bytes long but '{symbol}' is {length_as_shift_jis}"
+                f"Invalid symbol definition. Since #bpp={bpp}, timing symbols \
+                should be {bpp} bytes long but '{symbol}' is {length_as_shift_jis}"
             )
         if timing > self.beats_per_section:
-            message = (
-                "Invalid symbol definition conscidering the number of beats per section :\n"
-                f"*{symbol}:{timing}"
+            raise ValueError(
+                f"Invalid symbol definition. Since sections only last \
+                {self.beats_per_section} beats, a symbol cannot happen \
+                afterwards at {timing}"
             )
-            raise ValueError(message)
         self.symbols[symbol] = timing
 
     def is_short_line(self, line: str) -> bool:
