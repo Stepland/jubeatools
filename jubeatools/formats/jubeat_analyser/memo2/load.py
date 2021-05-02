@@ -205,8 +205,6 @@ class Memo2Parser(JubeatAnalyserParser):
                 "offset increase command (r=...)  found outside of the file "
                 "header, this is not supported by jubeatools"
             )
-        elif self.offset is None:
-            super().do_o(value)
         else:
             super().do_r(value)
 
@@ -264,13 +262,7 @@ class Memo2Parser(JubeatAnalyserParser):
                             "Chart contains a pause that's not happening at the "
                             "very first beat, these are not supported by jubeatools"
                         )
-                    if self.offset is None:
-                        self.offset = event.duration
-                    else:
-                        # This could happen if several pauses exist at the first
-                        # beat of the chart or if both an in-bar pause and an
-                        # o=... command exist
-                        self.offset += event.duration
+                    self.offset += event.duration
 
             bar_notes = [e for e in bar if isinstance(e, str)]
             line = Memo2ChartLine(raw_line.position, bar_notes)

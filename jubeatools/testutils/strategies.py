@@ -4,7 +4,7 @@ Hypothesis strategies to generate notes and charts
 from decimal import Decimal
 from enum import Enum, Flag, auto
 from itertools import product
-from typing import Any, Callable, List, Optional, Set, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, Union
 
 import hypothesis.strategies as st
 from multidict import MultiDict
@@ -118,7 +118,9 @@ def notes(draw: DrawFunc, options: NoteOption) -> Set[Union[TapNote, LongNote]]:
     if NoteOption.COLLISIONS in options:
         return raw_notes
     else:
-        last_notes = {NotePosition(x, y): None for y, x in product(range(4), range(4))}
+        last_notes: Dict[NotePosition, Optional[BeatsTime]] = {
+            NotePosition(x, y): None for y, x in product(range(4), range(4))
+        }
         notes: Set[Union[TapNote, LongNote]] = set()
         for note in sorted(raw_notes, key=lambda n: (n.time, n.position)):
             last_note_time = last_notes[note.position]

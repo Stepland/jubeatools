@@ -1,6 +1,5 @@
+from pathlib import Path
 from typing import Any, Callable, Dict, Protocol
-
-from path import Path
 
 from jubeatools.song import Song
 

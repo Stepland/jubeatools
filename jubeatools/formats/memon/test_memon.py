@@ -30,7 +30,7 @@ def dump_and_load(
         filename, contents = list(files.items())[0]
         file.write(contents)
         file.seek(0)
-        actual_song = load_function(file.name)
+        actual_song = load_function(Path(file.name))
 
     assert expected_song == actual_song
 
