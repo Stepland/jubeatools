@@ -13,6 +13,7 @@ from more_itertools import collapse, mark_ends
 from parsimonious import Grammar, NodeVisitor, ParseError
 
 from jubeatools.song import (
+    BeatsTime,
     Chart,
     LongNote,
     Metadata,
@@ -28,7 +29,6 @@ from jubeatools.utils import none_or
 from ..command import is_command, parse_command
 from ..files import load_files
 from ..load_tools import (
-    CIRCLE_FREE_TO_DECIMAL_TIME,
     CIRCLE_FREE_TO_NOTE_SYMBOL,
     EMPTY_BEAT_SYMBOLS,
     LONG_ARROWS,
@@ -53,18 +53,18 @@ from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 class MemoFrame(DoubleColumnFrame):
     @property
-    def duration(self) -> Decimal:
-        res = 0
-        for t in self.timing_part:
-            res += len(t)
-        return Decimal("0.25") * res
+    def duration(self) -> BeatsTime:
+        # This is wrong for the last frame in a section if the section has a
+        # decimal beat length that's not a multiple of 1/4
+        number_of_symbols = sum(len(t) for t in self.timing_part)
+        return BeatsTime("1/4") * number_of_symbols
 
 
 @dataclass
 class MemoLoadedSection:
     frames: List[MemoFrame]
-    symbols: Dict[str, Decimal]
-    length: Decimal
+    symbols: Dict[str, BeatsTime]
+    length: BeatsTime
     tempo: Decimal
 
     def __str__(self) -> str:
@@ -87,15 +87,26 @@ class MemoParser(JubeatAnalyserParser):
     def __init__(self) -> None:
         super().__init__()
         self.current_chart_lines: List[DoubleColumnChartLine] = []
-        self.symbols: Dict[str, Decimal] = {}
-        self.frames: List[MemoFrame] = []
+        self.current_frames: List[MemoFrame] = []
         self.sections: List[MemoLoadedSection] = []
 
     def do_memo(self) -> None:
         ...
 
+    def do_b(self, value: str) -> None:
+        """Because of the way the parser works,
+        b= commands must mark the end of a section to be properly taken into
+        account"""
+        if self.current_chart_lines:
+            raise SyntaxError("Found a b= command before the end of a frame")
+        if self.current_frames and self._frames_duration() < self.beats_per_section:
+            raise SyntaxError("Found a b= command before the end of a section")
+
+        self._push_section()
+        super().do_b(value)
+
     def do_bpp(self, value: str) -> None:
-        if self.sections or self.frames:
+        if self.sections or self.current_frames:
             raise ValueError("jubeatools does not handle changes of #bpp halfway")
         else:
             self._do_bpp(value)
@@ -106,10 +117,23 @@ class MemoParser(JubeatAnalyserParser):
         if len(self.current_chart_lines) == 4:
             self._push_frame()
 
-    def _frames_duration(self) -> Decimal:
-        return sum((frame.duration for frame in self.frames), start=Decimal(0))
+    def _frames_duration(self) -> BeatsTime:
+        return sum(
+            (frame.duration for frame in self.current_frames), start=BeatsTime(0)
+        )
+
+    def _current_beat(self) -> BeatsTime:
+        # If we've already seen enough beats, we need to circumvent the wrong
+        # duration computation
+        if self._frames_duration() >= self.beats_per_section:
+            frames_duration = self.beats_per_section
+        else:
+            frames_duration = self._frames_duration()
+
+        return self.section_starting_beat + frames_duration
 
     def _push_frame(self) -> None:
+        """Take all chart lines and push them to a new frame"""
         position_part = [
             self._split_chart_line(memo_line.position)
             for memo_line in self.current_chart_lines
@@ -127,19 +151,25 @@ class MemoParser(JubeatAnalyserParser):
                 # then the current frame starts a new section
                 self._push_section()
 
-        self.frames.append(frame)
+        self.current_frames.append(frame)
         self.current_chart_lines = []
 
     def _push_section(self) -> None:
+        """Take all currently stacked frames and push them to a new section,
+        Move time forward by the number of beats per section"""
+        if not self.current_frames:
+            raise RuntimeError(
+                "Tried pushing a new section but no frames are currently stacked"
+            )
         self.sections.append(
             MemoLoadedSection(
-                frames=self.frames,
+                frames=self.current_frames,
                 symbols=deepcopy(self.symbols),
                 length=self.beats_per_section,
                 tempo=self.current_tempo,
             )
         )
-        self.frames = []
+        self.current_frames = []
         self.section_starting_beat += self.beats_per_section
 
     def finish_last_few_notes(self) -> None:
@@ -179,20 +209,22 @@ class MemoParser(JubeatAnalyserParser):
 
     def _iter_frames(
         self,
-    ) -> Iterator[Tuple[Mapping[str, Decimal], MemoFrame, Decimal, MemoLoadedSection]]:
+    ) -> Iterator[
+        Tuple[Mapping[str, BeatsTime], MemoFrame, BeatsTime, MemoLoadedSection]
+    ]:
         """iterate over tuples of
         currently_defined_symbols, frame_starting_beat, frame, section_starting_beat, section"""
-        local_symbols: Dict[str, Decimal] = {}
-        section_starting_beat = Decimal(0)
+        local_symbols: Dict[str, BeatsTime] = {}
+        section_starting_beat = BeatsTime(0)
         for section in self.sections:
-            frame_starting_beat = Decimal(0)
+            frame_starting_beat = BeatsTime(0)
             for i, frame in enumerate(section.frames):
                 if frame.timing_part:
                     frame_starting_beat = sum(
-                        (f.duration for f in section.frames[:i]), start=Decimal(0)
+                        (f.duration for f in section.frames[:i]), start=BeatsTime(0)
                     )
                     local_symbols = {
-                        symbol: Decimal("0.25") * i + frame_starting_beat
+                        symbol: BeatsTime("1/4") * i + frame_starting_beat
                         for i, symbol in enumerate(collapse(frame.timing_part))
                         if symbol not in EMPTY_BEAT_SYMBOLS
                     }
@@ -232,7 +264,7 @@ class MemoParser(JubeatAnalyserParser):
                         continue
 
                 should_skip.add(pos)
-                note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                note_time = section_starting_beat + symbol_time
                 yield unfinished_long.ends_at(note_time)
 
             unfinished_longs = {
@@ -253,7 +285,7 @@ class MemoParser(JubeatAnalyserParser):
                     should_skip.add(note_pos)
                     symbol = frame.position_part[note_pos.y][note_pos.x]
                     symbol_time = currently_defined_symbols[symbol]
-                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                    note_time = section_starting_beat + symbol_time
                     unfinished_longs[note_pos] = UnfinishedLongNote(
                         time=note_time, position=note_pos, tail_tip=arrow_pos
                     )
@@ -268,7 +300,7 @@ class MemoParser(JubeatAnalyserParser):
                     symbol_time = currently_defined_symbols[symbol]
                 except KeyError:
                     continue
-                note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                note_time = section_starting_beat + symbol_time
                 yield TapNote(note_time, position)
 
     def _iter_notes_without_longs(self) -> Iterator[TapNote]:
@@ -285,7 +317,7 @@ class MemoParser(JubeatAnalyserParser):
                     symbol_time = currently_defined_symbols[symbol]
                 except KeyError:
                     continue
-                note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                note_time = section_starting_beat + symbol_time
                 position = NotePosition(x, y)
                 yield TapNote(note_time, position)
 
@@ -296,7 +328,7 @@ def _load_memo_file(lines: List[str]) -> Song:
         try:
             parser.load_line(raw_line)
         except Exception as e:
-            raise SyntaxError(f"On line {i}\n{e}") from None
+            raise SyntaxError(f"On line {i+1}\n{e}")
 
     parser.finish_last_few_notes()
     metadata = Metadata(

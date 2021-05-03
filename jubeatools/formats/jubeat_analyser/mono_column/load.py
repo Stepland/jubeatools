@@ -32,7 +32,7 @@ from jubeatools.utils import none_or
 from ..command import is_command, parse_command
 from ..files import load_files
 from ..load_tools import (
-    CIRCLE_FREE_TO_DECIMAL_TIME,
+    CIRCLE_FREE_TO_BEATS_TIME,
     LONG_ARROWS,
     LONG_DIRECTION,
     JubeatAnalyserParser,
@@ -81,11 +81,6 @@ def parse_mono_column_chart_line(line: str) -> str:
     return MonoColumnChartLineVisitor().visit(mono_column_chart_line_grammar.parse(line))  # type: ignore
 
 
-SYMBOL_TO_DECIMAL_TIME = {
-    symbol: Decimal("0.25") * index for index, symbol in enumerate(NOTE_SYMBOLS)
-}
-
-
 @dataclass
 class MonoColumnLoadedSection:
     """
@@ -98,8 +93,8 @@ class MonoColumnLoadedSection:
     """
 
     chart_lines: List[str]
-    symbols: Dict[str, Decimal]
-    length: Decimal
+    symbols: Dict[str, BeatsTime]
+    length: BeatsTime
     tempo: Decimal
 
     def blocs(self, bpp: int = 2) -> Iterator[List[List[str]]]:
@@ -119,6 +114,9 @@ class MonoColumnParser(JubeatAnalyserParser):
         super().__init__()
         self.current_chart_lines: List[str] = []
         self.sections: List[MonoColumnLoadedSection] = []
+
+    def _current_beat(self) -> BeatsTime:
+        return self.section_starting_beat
 
     def do_bpp(self, value: Union[int, str]) -> None:
         if self.sections:
@@ -179,8 +177,8 @@ class MonoColumnParser(JubeatAnalyserParser):
 
     def _iter_blocs(
         self,
-    ) -> Iterator[Tuple[Decimal, MonoColumnLoadedSection, List[List[str]]]]:
-        section_starting_beat = Decimal(0)
+    ) -> Iterator[Tuple[BeatsTime, MonoColumnLoadedSection, List[List[str]]]]:
+        section_starting_beat = BeatsTime(0)
         for section in self.sections:
             for bloc in section.blocs():
                 yield section_starting_beat, section, bloc
@@ -198,10 +196,8 @@ class MonoColumnParser(JubeatAnalyserParser):
                 if self.circle_free:
                     if symbol in CIRCLE_FREE_SYMBOLS:
                         should_skip.add(pos)
-                        symbol_time = CIRCLE_FREE_TO_DECIMAL_TIME[symbol]
-                        note_time = decimal_to_beats(
-                            section_starting_beat + symbol_time
-                        )
+                        symbol_time = CIRCLE_FREE_TO_BEATS_TIME[symbol]
+                        note_time = section_starting_beat + symbol_time
                         yield unfinished_long.ends_at(note_time)
                     elif symbol in section.symbols:
                         raise SyntaxError(
@@ -212,9 +208,7 @@ class MonoColumnParser(JubeatAnalyserParser):
                     if symbol in section.symbols:
                         should_skip.add(pos)
                         symbol_time = section.symbols[symbol]
-                        note_time = decimal_to_beats(
-                            section_starting_beat + symbol_time
-                        )
+                        note_time = section_starting_beat + symbol_time
                         yield unfinished_long.ends_at(note_time)
 
             unfinished_longs = {
@@ -235,7 +229,7 @@ class MonoColumnParser(JubeatAnalyserParser):
                     should_skip.add(note_pos)
                     symbol = bloc[note_pos.y][note_pos.x]
                     symbol_time = section.symbols[symbol]
-                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                    note_time = section_starting_beat + symbol_time
                     unfinished_longs[note_pos] = UnfinishedLongNote(
                         time=note_time, position=note_pos, tail_tip=arrow_pos
                     )
@@ -248,17 +242,17 @@ class MonoColumnParser(JubeatAnalyserParser):
                 symbol = bloc[y][x]
                 if symbol in section.symbols:
                     symbol_time = section.symbols[symbol]
-                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                    note_time = section_starting_beat + symbol_time
                     yield TapNote(note_time, position)
 
     def _iter_notes_without_longs(self) -> Iterator[TapNote]:
-        section_starting_beat = Decimal(0)
+        section_starting_beat = BeatsTime(0)
         for section in self.sections:
             for bloc, y, x in product(section.blocs(), range(4), range(4)):
                 symbol = bloc[y][x]
                 if symbol in section.symbols:
                     symbol_time = section.symbols[symbol]
-                    note_time = decimal_to_beats(section_starting_beat + symbol_time)
+                    note_time = section_starting_beat + symbol_time
                     position = NotePosition(x, y)
                     yield TapNote(note_time, position)
             section_starting_beat += section.length

@@ -4,6 +4,7 @@ Hypothesis strategies to generate notes and charts
 from decimal import Decimal
 from enum import Enum, Flag, auto
 from itertools import product
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, Union
 
 import hypothesis.strategies as st
@@ -184,7 +185,14 @@ def get_bpm_change_time(b: BPMEvent) -> BeatsTime:
 
 @st.composite
 def chart(draw: DrawFunc, timing_strat: Any, notes_strat: Any) -> Chart:
-    level = draw(st.integers(min_value=0))
+    level = Decimal(
+        draw(
+            st.one_of(
+                st.integers(min_value=0),
+                st.decimals(min_value=0, max_value=10.9, places=1),
+            )
+        )
+    )
     timing = draw(timing_strat)
     notes = draw(notes_strat)
     return Chart(
@@ -206,13 +214,18 @@ def preview(draw: DrawFunc) -> Preview:
 
 
 @st.composite
-def metadata(draw: DrawFunc) -> Metadata:
+def metadata(
+    draw: DrawFunc,
+    text_strat: st.SearchStrategy[str] = st.text(),
+    path_start: st.SearchStrategy[str] = st.text(),
+) -> Metadata:
     return Metadata(
-        title=draw(st.text()),
-        artist=draw(st.text()),
-        audio=draw(st.text()),
-        cover=draw(st.text()),
+        title=draw(text_strat),
+        artist=draw(text_strat),
+        audio=Path(draw(path_start)),
+        cover=Path(draw(path_start)),
         preview=draw(st.one_of(st.none(), preview())),
+        preview_file=draw(path_start),
     )
 
 

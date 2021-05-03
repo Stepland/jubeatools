@@ -1,0 +1,36 @@
+from decimal import Decimal
+from pathlib import Path
+
+from jubeatools.song import *
+
+data = (
+    Song(
+        metadata=Metadata(
+            title="",
+            artist="",
+            audio=Path(""),
+            cover=Path(""),
+            preview=None,
+            preview_file=None,
+        ),
+        charts={
+            "BSC": Chart(
+                level=Decimal("0.0"),
+                timing=Timing(
+                    events=[
+                        BPMEvent(time=Fraction(0, 1), BPM=Decimal("1.000")),
+                        BPMEvent(time=Fraction(13, 3), BPM=Decimal("1.000")),
+                    ],
+                    beat_zero_offset=Decimal("0.000"),
+                ),
+                notes=[
+                    TapNote(time=Fraction(0, 1), position=NotePosition(x=0, y=0)),
+                    TapNote(time=Fraction(0, 1), position=NotePosition(x=0, y=1)),
+                    TapNote(time=Fraction(9, 2), position=NotePosition(x=0, y=0)),
+                ],
+            )
+        },
+        global_timing=None,
+    ),
+    False,
+)

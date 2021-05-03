@@ -14,17 +14,22 @@ from jubeatools.song import (
     SecondsTime,
     TapNote,
     Timing,
+    Song
 )
 from jubeatools.testutils.strategies import NoteOption, long_note
 from jubeatools.testutils.strategies import notes as notes_strat
 from jubeatools.testutils.strategies import tap_note
 
-from ..mono_column.dump import _dump_mono_column_chart
-from ..mono_column.load import MonoColumnParser
+from jubeatools.formats import Format
+from jubeatools.formats.jubeat_analyser.mono_column.dump import _dump_mono_column_chart
+from jubeatools.formats.jubeat_analyser.mono_column.load import MonoColumnParser
+
+
+from ..test_utils import load_and_dump_then_check, memo_compatible_song
 
 
 @given(st.sets(tap_note(), min_size=1, max_size=100))
-def test_tap_notes(notes: Set[TapNote]) -> None:
+def test_that_a_set_of_tap_notes_roundtrip(notes: Set[TapNote]) -> None:
     timing = Timing(
         events=[BPMEvent(BeatsTime(0), Decimal(120))], beat_zero_offset=SecondsTime(0)
     )
@@ -44,7 +49,7 @@ def test_tap_notes(notes: Set[TapNote]) -> None:
 
 
 @given(long_note())
-def test_single_long_note(note: LongNote) -> None:
+def test_that_a_single_long_note_roundtrips(note: LongNote) -> None:
     timing = Timing(
         events=[BPMEvent(BeatsTime(0), Decimal(120))], beat_zero_offset=SecondsTime(0)
     )
@@ -60,7 +65,7 @@ def test_single_long_note(note: LongNote) -> None:
 
 
 @given(notes_strat(NoteOption.LONGS))
-def test_many_notes(notes: List[Union[TapNote, LongNote]]) -> None:
+def test_that_many_notes_roundtrip(notes: List[Union[TapNote, LongNote]]) -> None:
     timing = Timing(
         events=[BPMEvent(BeatsTime(0), Decimal(120))], beat_zero_offset=SecondsTime(0)
     )
@@ -77,3 +82,8 @@ def test_many_notes(notes: List[Union[TapNote, LongNote]]) -> None:
         parser.load_line(line)
     actual = set(parser.notes())
     assert notes == actual
+
+
+@given(memo_compatible_song(), st.booleans())
+def test_that_full_chart_roundtrips(song: Song, circle_free: bool) -> None:
+    load_and_dump_then_check(Format.MONO_COLUMN, song, circle_free)

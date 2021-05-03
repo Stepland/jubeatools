@@ -132,7 +132,7 @@ class SortedDefaultDict(SortedDict, Generic[K, V]):
 @dataclass
 class _JubeatAnalyerDumpedSection:
     current_beat: BeatsTime
-    length: Decimal = Decimal(4)
+    length: BeatsTime = BeatsTime(4)
     commands: Dict[str, Optional[str]] = field(default_factory=dict)
     symbol_definitions: Dict[BeatsTime, str] = field(default_factory=dict)
     symbols: Dict[BeatsTime, str] = field(default_factory=dict)
@@ -188,15 +188,15 @@ def create_sections_from_chart(
 
     header = sections[BeatsTime(0)].commands
     header["o"] = int(timing.beat_zero_offset * 1000)
-    header["lev"] = int(chart.level)
+    header["lev"] = Decimal(chart.level)
     header["dif"] = DIFFICULTIES.get(difficulty, 3)
-    if metadata.audio:
+    if metadata.audio is not None:
         header["m"] = metadata.audio
-    if metadata.title:
+    if metadata.title is not None:
         header["title"] = metadata.title
-    if metadata.artist:
+    if metadata.artist is not None:
         header["artist"] = metadata.artist
-    if metadata.cover:
+    if metadata.cover is not None:
         header["jacket"] = metadata.cover
     if metadata.preview is not None:
         header["prevpos"] = int(metadata.preview.start * 1000)

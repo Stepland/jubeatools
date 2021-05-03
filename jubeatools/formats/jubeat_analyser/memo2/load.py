@@ -31,7 +31,6 @@ from jubeatools.utils import none_or
 from ..command import is_command, parse_command
 from ..files import load_files
 from ..load_tools import (
-    CIRCLE_FREE_TO_DECIMAL_TIME,
     CIRCLE_FREE_TO_NOTE_SYMBOL,
     EMPTY_BEAT_SYMBOLS,
     LONG_ARROWS,
@@ -97,6 +96,13 @@ class Memo2ChartLine:
 
     position: str
     timing: Optional[List[str]]
+
+    @property
+    def duration(self) -> BeatsTime:
+        if self.timing:
+            return BeatsTime(1)
+        else:
+            return BeatsTime(0)
 
 
 memo2_chart_line_grammar = Grammar(
@@ -185,26 +191,27 @@ class Memo2Parser(JubeatAnalyserParser):
     def __init__(self) -> None:
         super().__init__()
         self.current_chart_lines: List[Memo2ChartLine] = []
-        self.current_beat = BeatsTime(0)
         self.frames: List[Memo2Frame] = []
 
     def do_b(self, value: str) -> None:
-        raise ValueError(
+        raise RuntimeError(
             "beat command (b=...) found, this commands cannot be used in #memo2 files"
         )
 
     def do_t(self, value: str) -> None:
         if self.frames:
-            raise ValueError(
+            raise RuntimeError(
                 "tempo command (t=...) found outside of the file header, "
                 "this should not happen in #memo2 files"
             )
         else:
-            self.timing_events.append(BPMEvent(self.current_beat, BPM=Decimal(value)))
+            self.timing_events.append(
+                BPMEvent(self._current_beat(), BPM=Decimal(value))
+            )
 
     def do_r(self, value: str) -> None:
         if self.frames:
-            raise ValueError(
+            raise RuntimeError(
                 "offset increase command (r=...)  found outside of the file "
                 "header, this is not supported by jubeatools"
             )
@@ -219,7 +226,7 @@ class Memo2Parser(JubeatAnalyserParser):
 
     def do_bpp(self, value: Union[int, str]) -> None:
         if self.frames:
-            raise ValueError("jubeatools does not handle changes of #bpp halfway")
+            raise RuntimeError("jubeatools does not handle changes of #bpp halfway")
         else:
             self._do_bpp(value)
 
@@ -256,10 +263,12 @@ class Memo2Parser(JubeatAnalyserParser):
                     in_bar_beat += symbol_duration
                 elif isinstance(event, BPM):
                     self.timing_events.append(
-                        BPMEvent(time=self.current_beat + in_bar_beat, BPM=event.value)
+                        BPMEvent(
+                            time=self._current_beat() + in_bar_beat, BPM=event.value
+                        )
                     )
                 elif isinstance(event, Stop):
-                    time = self.current_beat + in_bar_beat
+                    time = self._current_beat() + in_bar_beat
                     if time != 0:
                         raise ValueError(
                             "Chart contains a pause that's not happening at the "
@@ -274,8 +283,16 @@ class Memo2Parser(JubeatAnalyserParser):
         if len(self.current_chart_lines) == 4:
             self._push_frame()
 
+    def _current_beat(self) -> BeatsTime:
+        return self._frames_duration() + self._lines_duration()
+
     def _frames_duration(self) -> BeatsTime:
         return sum((frame.duration for frame in self.frames), start=BeatsTime(0))
+
+    def _lines_duration(self) -> BeatsTime:
+        return sum(
+            (line.duration for line in self.current_chart_lines), start=BeatsTime(0)
+        )
 
     def _push_frame(self) -> None:
         position_part = [

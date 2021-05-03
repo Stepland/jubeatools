@@ -55,7 +55,7 @@ class Frame:
     positions: Dict[NotePosition, str] = field(default_factory=dict)
     bars: Dict[int, List[str]] = field(default_factory=dict)
 
-    def dump(self, length: Decimal) -> Iterator[str]:
+    def dump(self, length: BeatsTime) -> Iterator[str]:
         # Check that bars are contiguous
         for a, b in windowed(sorted(self.bars), 2):
             if a is not None and b is not None:
@@ -77,7 +77,7 @@ class Frame:
                 for x in range(4)
             )
 
-    def dump_bars(self, length: Decimal) -> Iterator[str]:
+    def dump_bars(self, length: BeatsTime) -> Iterator[str]:
         for i in range(ceil(length)):
             if i in self.bars:
                 yield f"|{''.join(self.bars[i])}|"
@@ -110,7 +110,9 @@ class Memo1DumpedSection(JubeatAnalyserDumpedSection):
         symbols_iterator = iter(NOTE_SYMBOLS)
         for bar_index in range(ceil(self.length)):
             notes = notes_by_bar.get(bar_index, [])
-            bar_length = lcm(*(note.time.denominator for note in notes))
+            bar_length = lcm(
+                *((note.time - self.current_beat).denominator for note in notes)
+            )
             if bar_length < 3:
                 bar_length = 4
             bar_dict: Dict[int, str] = {}
@@ -215,6 +217,10 @@ def _raise_if_unfit_for_memo1(
         )
 
 
+def _section_factory(b: BeatsTime) -> Memo1DumpedSection:
+    return Memo1DumpedSection(current_beat=b)
+
+
 def _dump_memo1_chart(
     difficulty: str,
     chart: Chart,
@@ -236,8 +242,9 @@ def _dump_memo1_chart(
     file = StringIO()
     file.write(f"// Converted using jubeatools {__version__}\n")
     file.write(f"// https://github.com/Stepland/jubeatools\n\n")
-    for _, section in sections.items():
-        file.write(section.render(circle_free) + "\n")
+    file.write(
+        "\n\n".join(section.render(circle_free) for _, section in sections.items())
+    )
 
     return file
 

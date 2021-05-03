@@ -1,6 +1,14 @@
 # Unreleased
 ## Fixed
-- [jubeat-analyser] Raise exception earlier when a mono-column file is detected by the other #memo parsers (based on "--" separator lines)
+- [jubeat-analyser]
+    - Raise exception earlier when a mono-column file is detected by the other #memo parsers (based on "--" separator lines)
+    - [#memo] [#memo1]
+        - Fix incorrect handling of mid-chart `t=` and `b=` commands
+        - Prettify rendering by adding more blank lines between sections
+    - [#memo1] Fix dumping of chart with bpm changes happening on beat times that aren't multiples of 1/4
+    - [#memo2]
+        - Fix parsing of BPM changes
+        - Fix dumping of BPM changes
 
 # v0.1.3
 ## Changed

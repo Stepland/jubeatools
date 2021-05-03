@@ -4,7 +4,7 @@ import pytest
 
 from jubeatools.song import BeatsTime, LongNote, NotePosition, TapNote
 
-from ..mono_column.load import MonoColumnParser
+from jubeatools.formats.jubeat_analyser.mono_column.load import MonoColumnParser
 
 
 def compare_chart_notes(

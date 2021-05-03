@@ -139,6 +139,10 @@ def _raise_if_unfit_for_mono_column(
         )
 
 
+def _section_factory(b: BeatsTime) -> MonoColumnDumpedSection:
+    return MonoColumnDumpedSection(current_beat=b)
+
+
 def _dump_mono_column_chart(
     difficulty: str,
     chart: Chart,
@@ -150,7 +154,7 @@ def _dump_mono_column_chart(
     _raise_if_unfit_for_mono_column(chart, timing, circle_free)
 
     sections = create_sections_from_chart(
-        MonoColumnDumpedSection, chart, difficulty, timing, metadata, circle_free
+        _section_factory, chart, difficulty, timing, metadata, circle_free
     )
 
     # Define extra symbols

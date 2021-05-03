@@ -1,28 +1,23 @@
-import tempfile
 from decimal import Decimal
-from fractions import Fraction
 from pathlib import Path
-from typing import Set, Union
+from typing import List, Union
 
 from hypothesis import example, given
-from hypothesis import note as hypothesis_note
 from hypothesis import strategies as st
 
 from jubeatools import song
-from jubeatools.formats.enum import Format
-from jubeatools.formats.guess import guess_format
-from jubeatools.formats.jubeat_analyser.memo.dump import _dump_memo_chart, dump_memo
-from jubeatools.formats.jubeat_analyser.memo.load import MemoParser, load_memo
-from jubeatools.testutils import strategies as jbst
-from jubeatools.testutils.typing import DrawFunc
+from jubeatools.formats import Format
+from jubeatools.formats.jubeat_analyser.memo1.dump import _dump_memo1_chart, dump_memo1
+from jubeatools.formats.jubeat_analyser.memo1.load import Memo1Parser
+from jubeatools.testutils.strategies import NoteOption
+from jubeatools.testutils.strategies import notes as notes_strat
 
 from ..test_utils import load_and_dump_then_check, memo_compatible_song
-from . import example1, example2, example3
+from . import example1
 
 
-@given(jbst.notes(jbst.NoteOption.LONGS))
-@example(example1.notes)
-def test_that_notes_roundtrip(notes: Set[Union[song.TapNote, song.LongNote]]) -> None:
+@given(notes_strat(NoteOption.LONGS))
+def test_that_notes_roundtrip(notes: List[Union[song.TapNote, song.LongNote]]) -> None:
     timing = song.Timing(
         events=[song.BPMEvent(song.BeatsTime(0), Decimal(120))],
         beat_zero_offset=song.SecondsTime(0),
@@ -33,9 +28,9 @@ def test_that_notes_roundtrip(notes: Set[Union[song.TapNote, song.LongNote]]) ->
         notes=sorted(notes, key=lambda n: (n.time, n.position)),
     )
     metadata = song.Metadata("", "", Path(""), Path(""))
-    string_io = _dump_memo_chart("", chart, metadata, timing, False)
+    string_io = _dump_memo1_chart("", chart, metadata, timing)
     chart_text = string_io.getvalue()
-    parser = MemoParser()
+    parser = Memo1Parser()
     for line in chart_text.split("\n"):
         parser.load_line(line)
     parser.finish_last_few_notes()
@@ -44,7 +39,6 @@ def test_that_notes_roundtrip(notes: Set[Union[song.TapNote, song.LongNote]]) ->
 
 
 @given(memo_compatible_song(), st.booleans())
-@example(*example2.data)
-@example(*example3.data)
+@example(*example1.data)
 def test_that_full_chart_roundtrips(song: song.Song, circle_free: bool) -> None:
-    load_and_dump_then_check(Format.MEMO, song, circle_free)
+    load_and_dump_then_check(Format.MEMO_1, song, circle_free)

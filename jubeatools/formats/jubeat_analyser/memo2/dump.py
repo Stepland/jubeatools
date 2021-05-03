@@ -292,8 +292,8 @@ def _dump_memo2_chart(
     # Timing events
     sections[0].events.append(StopEvent(BeatsTime(0), timing.beat_zero_offset))
     for event in timing_events:
-        section_index = event.time // 4
-        sections[section_index].events.append(event)
+        section_beat = event.time - (event.time % 4)
+        sections[section_beat].events.append(event)
 
     # Fill sections with notes
     for key, next_key in windowed(chain(sections.keys(), [None]), 2):
@@ -307,15 +307,15 @@ def _dump_memo2_chart(
     file.write(f"// https://github.com/Stepland/jubeatools\n\n")
 
     # Header
-    file.write(dump_command("lev", int(chart.level)) + "\n")
+    file.write(dump_command("lev", Decimal(chart.level)) + "\n")
     file.write(dump_command("dif", DIFFICULTIES.get(difficulty, 1)) + "\n")
-    if metadata.audio:
+    if metadata.audio is not None:
         file.write(dump_command("m", metadata.audio) + "\n")
-    if metadata.title:
+    if metadata.title is not None:
         file.write(dump_command("title", metadata.title) + "\n")
-    if metadata.artist:
+    if metadata.artist is not None:
         file.write(dump_command("artist", metadata.artist) + "\n")
-    if metadata.cover:
+    if metadata.cover is not None:
         file.write(dump_command("jacket", metadata.cover) + "\n")
     if metadata.preview is not None:
         file.write(dump_command("prevpos", int(metadata.preview.start * 1000)) + "\n")

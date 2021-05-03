@@ -42,7 +42,7 @@ command_grammar = Grammar(
     equals_value    = ws "=" ws value
     value           = value_in_quotes / number
     value_in_quotes = '"' quoted_value '"'
-    quoted_value    = ~r"[^\"]*"
+    quoted_value    = ~r"([^\"\\]|\\\"|\\\\)*"
     number          = ~r"-?\d+(\.\d+)?"
     ws              = ~r"[\t ]*"
     comment         = ~r"//.*"
@@ -76,7 +76,7 @@ class CommandVisitor(NodeVisitor):
         self.key = letter.text
 
     def visit_quoted_value(self, node: Node, visited_children: List[Node]) -> None:
-        self.value = node.text
+        self.value = parse_value(node.text)
 
     def visit_number(self, node: Node, visited_children: List[Node]) -> None:
         self.value = node.text
@@ -115,8 +115,38 @@ def dump_command(key: str, value: Any = None) -> str:
     if isinstance(value, Number):
         value_part = f"={value}"
     elif value is not None:
-        value_part = f'="{value}"'
+        escaped = dump_value(str(value))
+        value_part = f'="{escaped}"'
     else:
         value_part = ""
 
     return key_part + value_part
+
+
+BACKSLASH = "\\"
+
+
+def parse_value(escaped: str) -> str:
+    """Unescapes a backslash-escaped string"""
+    res = []
+    i = 0
+    while i < len(escaped):
+        char = escaped[i]
+        if char == BACKSLASH:
+            if i + 1 == len(escaped):
+                raise ValueError("backslash at end of string")
+            else:
+                i += 1
+
+        res.append(escaped[i])
+        i += 1
+
+    return "".join(res)
+
+
+ESCAPE_TABLE = str.maketrans({'"': BACKSLASH + '"', BACKSLASH: BACKSLASH + BACKSLASH})
+
+
+def dump_value(value: str) -> str:
+    """backslash-escapes \ and " from a string"""
+    return value.translate(ESCAPE_TABLE)

@@ -35,10 +35,10 @@ from .symbols import (
 
 DIFFICULTIES = {1: "BSC", 2: "ADV", 3: "EXT"}
 
-SYMBOL_TO_DECIMAL_TIME = {c: Decimal("0.25") * i for i, c in enumerate(NOTE_SYMBOLS)}
+SYMBOL_TO_BEATS_TIME = {c: BeatsTime("1/4") * i for i, c in enumerate(NOTE_SYMBOLS)}
 
-CIRCLE_FREE_TO_DECIMAL_TIME = {
-    c: Decimal("0.25") * i for i, c in enumerate(CIRCLE_FREE_SYMBOLS)
+CIRCLE_FREE_TO_BEATS_TIME = {
+    c: BeatsTime("1/4") * i for i, c in enumerate(CIRCLE_FREE_SYMBOLS)
 }
 
 CIRCLE_FREE_TO_NOTE_SYMBOL = dict(zip(CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS))
@@ -301,14 +301,14 @@ def is_simple_solution(solution: Solution, domains: Candidates) -> bool:
 class JubeatAnalyserParser:
     def __init__(self) -> None:
         self.music: Optional[str] = None
-        self.symbols = deepcopy(SYMBOL_TO_DECIMAL_TIME)
-        self.section_starting_beat = Decimal("0")
+        self.symbols = deepcopy(SYMBOL_TO_BEATS_TIME)
+        self.section_starting_beat = BeatsTime(0)
         self.current_tempo = Decimal(120)
         self.timing_events: List[BPMEvent] = []
         self.offset = 0
-        self.beats_per_section = Decimal(4)
+        self.beats_per_section = BeatsTime(4)
         self.bytes_per_panel = 2
-        self.level = 1
+        self.level = Decimal(1)
         self.difficulty: Optional[str] = None
         self.title: Optional[str] = None
         self.artist: Optional[str] = None
@@ -329,7 +329,7 @@ class JubeatAnalyserParser:
             method()
 
     def do_b(self, value: str) -> None:
-        self.beats_per_section = Decimal(value)
+        self.beats_per_section = decimal_to_beats(Decimal(value))
 
     def do_m(self, value: str) -> None:
         self.music = value
@@ -344,7 +344,7 @@ class JubeatAnalyserParser:
         self.current_tempo = Decimal(value)
         self.timing_events.append(
             BPMEvent(
-                BeatsTime(self.section_starting_beat),
+                time=self._current_beat(),
                 BPM=self.current_tempo,
             )
         )
@@ -356,7 +356,7 @@ class JubeatAnalyserParser:
     do_ph = do_pw
 
     def do_lev(self, value: str) -> None:
-        self.level = int(value)
+        self.level = Decimal(value)
 
     def do_dif(self, value: str) -> None:
         dif = int(value)
@@ -430,7 +430,7 @@ class JubeatAnalyserParser:
                 f"{self.beats_per_section} beats, a symbol cannot happen "
                 f"afterwards at {timing}"
             )
-        self.symbols[symbol] = timing
+        self.symbols[symbol] = decimal_to_beats(timing)
 
     def is_short_line(self, line: str) -> bool:
         return len(line.encode("shift-jis-2004")) < self.bytes_per_panel * 4
@@ -448,6 +448,9 @@ class JubeatAnalyserParser:
                 f"indicates it's using {format_} format, if the file is actually "
                 f"in mono-column format (1列形式) there should be no {format_} line"
             )
+
+    def _current_beat(self) -> BeatsTime:
+        raise NotImplementedError
 
 
 @dataclass
