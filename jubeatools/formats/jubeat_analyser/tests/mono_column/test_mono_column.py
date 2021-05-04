@@ -2,9 +2,8 @@ from typing import Iterable, Union
 
 import pytest
 
-from jubeatools.song import BeatsTime, LongNote, NotePosition, TapNote
-
 from jubeatools.formats.jubeat_analyser.mono_column.load import MonoColumnParser
+from jubeatools.song import BeatsTime, LongNote, NotePosition, TapNote
 
 
 def compare_chart_notes(

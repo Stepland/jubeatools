@@ -1,4 +1,6 @@
 # Unreleased
+## Added
+- [#mono-column] #circlefree mode accepts non-16ths notes and falls back to normal symbols when needed
 ## Fixed
 - [jubeat-analyser]
     - Raise exception earlier when a mono-column file is detected by the other #memo parsers (based on "--" separator lines)

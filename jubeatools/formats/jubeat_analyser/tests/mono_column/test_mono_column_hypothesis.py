@@ -5,6 +5,9 @@ from typing import List, Set, Union
 import hypothesis.strategies as st
 from hypothesis import given
 
+from jubeatools.formats import Format
+from jubeatools.formats.jubeat_analyser.mono_column.dump import _dump_mono_column_chart
+from jubeatools.formats.jubeat_analyser.mono_column.load import MonoColumnParser
 from jubeatools.song import (
     BeatsTime,
     BPMEvent,
@@ -12,18 +15,13 @@ from jubeatools.song import (
     LongNote,
     Metadata,
     SecondsTime,
+    Song,
     TapNote,
     Timing,
-    Song
 )
 from jubeatools.testutils.strategies import NoteOption, long_note
 from jubeatools.testutils.strategies import notes as notes_strat
 from jubeatools.testutils.strategies import tap_note
-
-from jubeatools.formats import Format
-from jubeatools.formats.jubeat_analyser.mono_column.dump import _dump_mono_column_chart
-from jubeatools.formats.jubeat_analyser.mono_column.load import MonoColumnParser
-
 
 from ..test_utils import load_and_dump_then_check, memo_compatible_song
 

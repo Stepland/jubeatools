@@ -31,6 +31,7 @@ from ..dump_tools import (
     DEFAULT_EXTRA_SYMBOLS,
     DIRECTION_TO_ARROW,
     DIRECTION_TO_LINE,
+    NOTE_TO_CIRCLE_FREE_SYMBOL,
     JubeatAnalyserDumpedSection,
     LongNoteEnd,
     SortedDefaultDict,
@@ -38,7 +39,6 @@ from ..dump_tools import (
     fraction_to_decimal,
     jubeat_analyser_file_dumper,
 )
-from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
 
 
 class MonoColumnDumpedSection(JubeatAnalyserDumpedSection):
@@ -62,19 +62,18 @@ class MonoColumnDumpedSection(JubeatAnalyserDumpedSection):
         frames: List[Dict[NotePosition, str]] = []
         frame: Dict[NotePosition, str] = {}
         for note in self.notes:
+            time_in_section = note.time - self.current_beat
+            symbol = self.symbols[time_in_section]
             if isinstance(note, LongNote):
                 needed_positions = set(note.positions_covered())
                 if needed_positions & frame.keys():
                     frames.append(frame)
                     frame = {}
-
                 direction = note.tail_direction()
                 arrow = DIRECTION_TO_ARROW[direction]
                 line = DIRECTION_TO_LINE[direction]
                 for is_first, is_last, pos in mark_ends(note.positions_covered()):
                     if is_first:
-                        time_in_section = note.time - self.current_beat
-                        symbol = self.symbols[time_in_section]
                         frame[pos] = symbol
                     elif is_last:
                         frame[pos] = arrow
@@ -84,18 +83,13 @@ class MonoColumnDumpedSection(JubeatAnalyserDumpedSection):
                 if note.position in frame:
                     frames.append(frame)
                     frame = {}
-                time_in_section = note.time - self.current_beat
-                symbol = self.symbols[time_in_section]
                 frame[note.position] = symbol
             elif isinstance(note, LongNoteEnd):
                 if note.position in frame:
                     frames.append(frame)
                     frame = {}
-                time_in_section = note.time - self.current_beat
-                if circle_free:
-                    symbol = CIRCLE_FREE_SYMBOLS[int(time_in_section)]
-                else:
-                    symbol = self.symbols[time_in_section]
+                if circle_free and symbol in NOTE_TO_CIRCLE_FREE_SYMBOL:
+                    symbol = NOTE_TO_CIRCLE_FREE_SYMBOL[symbol]
                 frame[note.position] = symbol
 
         frames.append(frame)
@@ -108,9 +102,7 @@ class MonoColumnDumpedSection(JubeatAnalyserDumpedSection):
             yield "".join(frame.get(NotePosition(x, y), "□") for x in range(4))
 
 
-def _raise_if_unfit_for_mono_column(
-    chart: Chart, timing: Timing, circle_free: bool = False
-) -> None:
+def _raise_if_unfit_for_mono_column(chart: Chart, timing: Timing) -> None:
     if len(timing.events) < 1:
         raise ValueError("No BPM found in file") from None
 
@@ -128,16 +120,6 @@ def _raise_if_unfit_for_mono_column(
             " mono_column format is not supported by jubeatools"
         )
 
-    if circle_free and any(
-        (note.time + note.duration) % BeatsTime(1, 4) != 0
-        for note in chart.notes
-        if isinstance(note, LongNote)
-    ):
-        raise ValueError(
-            "Chart contains long notes whose ending timing aren't"
-            " representable in #circlefree mode"
-        )
-
 
 def _section_factory(b: BeatsTime) -> MonoColumnDumpedSection:
     return MonoColumnDumpedSection(current_beat=b)
@@ -151,7 +133,7 @@ def _dump_mono_column_chart(
     circle_free: bool = False,
 ) -> StringIO:
 
-    _raise_if_unfit_for_mono_column(chart, timing, circle_free)
+    _raise_if_unfit_for_mono_column(chart, timing)
 
     sections = create_sections_from_chart(
         _section_factory, chart, difficulty, timing, metadata, circle_free

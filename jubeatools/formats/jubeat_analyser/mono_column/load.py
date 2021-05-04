@@ -188,28 +188,20 @@ class MonoColumnParser(JubeatAnalyserParser):
         unfinished_longs: Dict[NotePosition, UnfinishedLongNote] = {}
         for section_starting_beat, section, bloc in self._iter_blocs():
             should_skip: Set[NotePosition] = set()
-
             # 1/3 : look for ends to unfinished long notes
             for pos, unfinished_long in unfinished_longs.items():
                 x, y = astuple(pos)
                 symbol = bloc[y][x]
-                if self.circle_free:
-                    if symbol in CIRCLE_FREE_SYMBOLS:
-                        should_skip.add(pos)
-                        symbol_time = CIRCLE_FREE_TO_BEATS_TIME[symbol]
-                        note_time = section_starting_beat + symbol_time
-                        yield unfinished_long.ends_at(note_time)
-                    elif symbol in section.symbols:
-                        raise SyntaxError(
-                            "Can't have a note symbol on the holding square of"
-                            " an unfinished long note when #circlefree is on"
-                        )
-                else:
-                    if symbol in section.symbols:
-                        should_skip.add(pos)
-                        symbol_time = section.symbols[symbol]
-                        note_time = section_starting_beat + symbol_time
-                        yield unfinished_long.ends_at(note_time)
+                if self.circle_free and symbol in CIRCLE_FREE_SYMBOLS:
+                    should_skip.add(pos)
+                    symbol_time = CIRCLE_FREE_TO_BEATS_TIME[symbol]
+                    note_time = section_starting_beat + symbol_time
+                    yield unfinished_long.ends_at(note_time)
+                elif symbol in section.symbols:
+                    should_skip.add(pos)
+                    symbol_time = section.symbols[symbol]
+                    note_time = section_starting_beat + symbol_time
+                    yield unfinished_long.ends_at(note_time)
 
             unfinished_longs = {
                 k: unfinished_longs[k] for k in unfinished_longs.keys() - should_skip
