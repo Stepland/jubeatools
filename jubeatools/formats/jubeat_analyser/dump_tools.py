@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    DefaultDict,
     Dict,
-    Generic,
     Iterator,
     List,
     Mapping,
-    Optional,
+    TypedDict,
     TypeVar,
     Union,
 )
@@ -34,6 +34,7 @@ from jubeatools.song import (
     TapNote,
     Timing,
 )
+from jubeatools.utils import fraction_to_decimal
 
 from .command import dump_command
 from .symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
@@ -92,11 +93,6 @@ DEFAULT_EXTRA_SYMBOLS = (
 )
 
 
-def fraction_to_decimal(frac: Fraction) -> Decimal:
-    "Thanks stackoverflow ! https://stackoverflow.com/a/40468867/10768117"
-    return frac.numerator / Decimal(frac.denominator)
-
-
 @dataclass(frozen=True)
 class LongNoteEnd:
     time: BeatsTime
@@ -107,7 +103,7 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-class SortedDefaultDict(SortedDict, Generic[K, V]):
+class SortedDefaultDict(SortedDict, DefaultDict[K, V]):
 
     """Custom SortedDict that also acts as a defaultdict,
     passes the key to the value factory"""
@@ -127,13 +123,36 @@ class SortedDefaultDict(SortedDict, Generic[K, V]):
         return value
 
 
+class Commands(TypedDict, total=False):
+    b: Union[int, Fraction, Decimal]
+    t: Union[int, Fraction, Decimal]
+    m: Union[str, Path]
+    o: int
+    r: int
+    title: str
+    artist: str
+    lev: Union[int, Decimal]
+    dif: int
+    jacket: Union[str, Path]
+    prevpos: int
+    holdbyarrow: int
+    circlefree: int
+    memo: None
+    memo1: None
+    memo2: None
+    boogie: None
+    pw: int
+    ph: int
+    bpp: int
+
+
 # Here we split dataclass and ABC stuff since mypy curently can't handle both
 # at once on a single class definition
 @dataclass
 class _JubeatAnalyerDumpedSection:
     current_beat: BeatsTime
     length: BeatsTime = BeatsTime(4)
-    commands: Dict[str, Optional[str]] = field(default_factory=dict)
+    commands: Commands = field(default_factory=Commands)  # type: ignore
     symbol_definitions: Dict[BeatsTime, str] = field(default_factory=dict)
     symbols: Dict[BeatsTime, str] = field(default_factory=dict)
     notes: List[Union[TapNote, LongNote, LongNoteEnd]] = field(default_factory=list)
@@ -143,33 +162,31 @@ class JubeatAnalyserDumpedSection(_JubeatAnalyerDumpedSection, ABC):
     def _dump_commands(self) -> Iterator[str]:
         keys = chain(COMMAND_ORDER, self.commands.keys() - set(COMMAND_ORDER))
         for key in keys:
-            try:
-                value = self.commands[key]
-            except KeyError:
-                continue
-            yield dump_command(key, value)
+            if key in self.commands:
+                yield dump_command(key, self.commands[key])  # type: ignore
 
     def _dump_symbol_definitions(self) -> Iterator[str]:
         for time, symbol in self.symbol_definitions.items():
             decimal_time = fraction_to_decimal(time)
-            yield f"*{symbol}:{decimal_time:.6f}"
+            yield f"*{symbol}:{decimal_time:.6}"
 
     @abstractmethod
     def _dump_notes(self, circle_free: bool) -> Iterator[str]:
         ...
 
-
-S = TypeVar("S", bound=JubeatAnalyserDumpedSection)
+    @abstractmethod
+    def render(self, circle_free: bool) -> str:
+        ...
 
 
 def create_sections_from_chart(
-    section_factory: Callable[[BeatsTime], S],
+    section_factory: Callable[[BeatsTime], JubeatAnalyserDumpedSection],
     chart: Chart,
     difficulty: str,
     timing: Timing,
     metadata: Metadata,
     circle_free: bool,
-) -> Mapping[BeatsTime, S]:
+) -> Mapping[BeatsTime, JubeatAnalyserDumpedSection]:
     sections = SortedDefaultDict(section_factory)
 
     timing_events = sorted(timing.events, key=lambda e: e.time)
@@ -213,15 +230,18 @@ def create_sections_from_chart(
 
     # First, Set every single b=… value
     for key, next_key in windowed(chain(sections.keys(), [None]), 2):
-        if next_key is None:
-            length = Decimal(4)
+        if key is None:
+            continue
+        elif next_key is None:
+            length = BeatsTime(4)
         else:
-            length = fraction_to_decimal(next_key - key)
+            length = next_key - key
+
         sections[key].commands["b"] = length
         sections[key].length = length
 
     # Then, trim all the redundant b=…
-    last_b = 4
+    last_b: Union[int, Fraction, Decimal] = 4
     for section in sections.values():
         current_b = section.commands["b"]
         if current_b == last_b:
@@ -231,6 +251,7 @@ def create_sections_from_chart(
 
     # Fill sections with notes
     for key, next_key in windowed(chain(sections.keys(), [None]), 2):
+        assert key is not None
         sections[key].notes = list(
             notes.irange_key(min_key=key, max_key=next_key, inclusive=(True, False))
         )

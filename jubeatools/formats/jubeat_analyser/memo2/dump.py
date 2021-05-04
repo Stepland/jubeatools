@@ -281,13 +281,16 @@ def _dump_memo2_chart(
         sections.add_key(beat)
 
     # Timing events
-    sections[0].events.append(StopEvent(BeatsTime(0), timing.beat_zero_offset))
+    sections[BeatsTime(0)].events.append(
+        StopEvent(BeatsTime(0), timing.beat_zero_offset)
+    )
     for event in timing_events:
         section_beat = event.time - (event.time % 4)
         sections[section_beat].events.append(event)
 
     # Fill sections with notes
     for key, next_key in windowed(chain(sections.keys(), [None]), 2):
+        assert key is not None
         sections[key].notes = list(
             notes.irange_key(min_key=key, max_key=next_key, inclusive=(True, False))
         )

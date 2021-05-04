@@ -1,4 +1,6 @@
 import unicodedata
+from decimal import Decimal
+from fractions import Fraction
 from functools import reduce
 from math import gcd
 from typing import Callable, Optional, TypeVar
@@ -28,3 +30,8 @@ def none_or(c: Callable[[A], B], e: Optional[A]) -> Optional[B]:
         return None
     else:
         return c(e)
+
+
+def fraction_to_decimal(frac: Fraction) -> Decimal:
+    "Thanks stackoverflow ! https://stackoverflow.com/a/40468867/10768117"
+    return frac.numerator / Decimal(frac.denominator)

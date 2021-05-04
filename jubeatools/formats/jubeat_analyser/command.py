@@ -24,11 +24,16 @@ Known hash commands :
   - #bpp              # bytes per panel (2 by default)
 """
 
-from numbers import Number
-from typing import Any, List, Optional, Tuple
+from decimal import ROUND_HALF_DOWN, Decimal
+from fractions import Fraction
+from functools import singledispatch
+from pathlib import Path
+from typing import Any, List, Optional, Tuple, Union
 
 from parsimonious import Grammar, NodeVisitor, ParseError
 from parsimonious.nodes import Node
+
+from jubeatools.utils import fraction_to_decimal
 
 command_grammar = Grammar(
     r"""
@@ -75,7 +80,7 @@ class CommandVisitor(NodeVisitor):
         self.key = letter.text
 
     def visit_quoted_value(self, node: Node, visited_children: List[Node]) -> None:
-        self.value = parse_value(node.text)
+        self.value = unescape_string_value(node.text)
 
     def visit_number(self, node: Node, visited_children: List[Node]) -> None:
         self.value = node.text
@@ -105,27 +110,83 @@ def parse_command(line: str) -> Tuple[str, Optional[str]]:
             raise
 
 
-def dump_command(key: str, value: Any = None) -> str:
+CommandValue = Union[str, Path, int, Decimal, Fraction]
+
+
+def dump_command(key: str, value: Optional[CommandValue] = None) -> str:
     if len(key) == 1:
         key_part = key
     else:
         key_part = f"#{key}"
 
-    if isinstance(value, Number):
-        value_part = f"={value}"
-    elif value is not None:
-        escaped = dump_value(str(value))
-        value_part = f'="{escaped}"'
-    else:
+    if value is None:
         value_part = ""
+    else:
+        dumped_value = dump_value(value)
+        value_part = f"={dumped_value}"
 
     return key_part + value_part
 
 
+@singledispatch
+def dump_value(value: CommandValue) -> str:
+    return str(value)
+
+
+@dump_value.register
+def dump_int_value(value: int) -> str:
+    return str(value)
+
+
+@dump_value.register
+def dump_decimal_value(value: Decimal) -> str:
+    return pretty_print_decimal(value)
+
+
+@dump_value.register
+def dump_fraction_value(value: Fraction) -> str:
+    decimal = fraction_to_decimal(value)
+    quantized = decimal.quantize(Decimal("0.000001"), rounding=ROUND_HALF_DOWN)
+    return pretty_print_decimal(quantized)
+
+
+@dump_value.register
+def dump_string_value(value: str) -> str:
+    """Escapes backslashes and " from a string"""
+    escaped = escape_string_value(value)
+    quoted = f'"{escaped}"'
+    return quoted
+
+
+@dump_value.register
+def dump_path_value(value: Path) -> str:
+    if value == Path(""):
+        string_value = ""
+    else:
+        string_value = str(value)
+
+    escaped = escape_string_value(string_value)
+    quoted = f'"{escaped}"'
+    return quoted
+
+
+def pretty_print_decimal(d: Decimal) -> str:
+    raw_string_form = str(d)
+    if "." in raw_string_form:
+        return raw_string_form.rstrip("0").rstrip(".")
+    else:
+        return raw_string_form
+
+
 BACKSLASH = "\\"
+ESCAPE_TABLE = str.maketrans({'"': BACKSLASH + '"', BACKSLASH: BACKSLASH + BACKSLASH})
 
 
-def parse_value(escaped: str) -> str:
+def escape_string_value(unescaped: str) -> str:
+    return unescaped.translate(ESCAPE_TABLE)
+
+
+def unescape_string_value(escaped: str) -> str:
     """Unescapes a backslash-escaped string"""
     res = []
     i = 0
@@ -141,11 +202,3 @@ def parse_value(escaped: str) -> str:
         i += 1
 
     return "".join(res)
-
-
-ESCAPE_TABLE = str.maketrans({'"': BACKSLASH + '"', BACKSLASH: BACKSLASH + BACKSLASH})
-
-
-def dump_value(value: str) -> str:
-    """Escapes backslashes and " from a string"""
-    return value.translate(ESCAPE_TABLE)

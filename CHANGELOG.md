@@ -1,3 +1,7 @@
+# Unreleased
+## Fixed
+- [jubeat-analyser] Prettier rendering of decimal values
+
 # v0.2.0
 ## Added
 - [#mono-column] #circlefree mode accepts non-16ths notes and falls back to normal symbols when needed

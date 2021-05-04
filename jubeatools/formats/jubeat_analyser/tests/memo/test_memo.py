@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Set, Union
 
 from hypothesis import example, given
+from hypothesis import note as hypothesis_note
 from hypothesis import strategies as st
 
 from jubeatools import song
@@ -30,6 +31,7 @@ def test_that_notes_roundtrip(notes: Set[Union[song.TapNote, song.LongNote]]) ->
     metadata = song.Metadata("", "", Path(""), Path(""))
     string_io = _dump_memo_chart("", chart, metadata, timing, False)
     chart_text = string_io.getvalue()
+    hypothesis_note(f"Chart :\n{chart_text}")
     parser = MemoParser()
     for line in chart_text.split("\n"):
         parser.load_line(line)
