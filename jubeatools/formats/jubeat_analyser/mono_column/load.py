@@ -258,14 +258,11 @@ def load_mono_column(path: Path) -> Song:
 
 def _load_mono_column_file(lines: List[str]) -> Song:
     parser = MonoColumnParser()
-    for i, raw_line in enumerate(lines):
+    for i, raw_line in enumerate(lines, start=1):
         try:
             parser.load_line(raw_line)
         except Exception as e:
-            raise SyntaxError(
-                f"Error while parsing mono column line {i} :\n"
-                f"{type(e).__name__}: {e}"
-            ) from None
+            raise SyntaxError(f"On line {i}\n{e}")
 
     metadata = Metadata(
         title=parser.title,

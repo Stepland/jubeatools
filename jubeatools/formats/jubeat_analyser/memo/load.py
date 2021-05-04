@@ -324,11 +324,11 @@ class MemoParser(JubeatAnalyserParser):
 
 def _load_memo_file(lines: List[str]) -> Song:
     parser = MemoParser()
-    for i, raw_line in enumerate(lines):
+    for i, raw_line in enumerate(lines, start=1):
         try:
             parser.load_line(raw_line)
         except Exception as e:
-            raise SyntaxError(f"On line {i+1}\n{e}")
+            raise SyntaxError(f"On line {i}\n{e}")
 
     parser.finish_last_few_notes()
     metadata = Metadata(
