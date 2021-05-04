@@ -1,18 +1,10 @@
-from collections import ChainMap, defaultdict
 from copy import deepcopy
-from dataclasses import dataclass, field
-from decimal import Decimal
-from fractions import Fraction
-from functools import partial
 from io import StringIO
-from itertools import chain
-from pathlib import Path
-from typing import Dict, Iterator, List, Mapping, Optional, Tuple
+from typing import Dict, Iterator, List
 
-from more_itertools import collapse, intersperse, mark_ends, windowed
-from sortedcontainers import SortedKeyList
+from more_itertools import collapse, intersperse, mark_ends
 
-from jubeatools.formats.filetypes import ChartFile, JubeatFile
+from jubeatools.formats.filetypes import ChartFile
 from jubeatools.song import (
     BeatsTime,
     Chart,
@@ -27,16 +19,13 @@ from jubeatools.version import __version__
 
 from ..dump_tools import (
     BEATS_TIME_TO_SYMBOL,
-    COMMAND_ORDER,
     DEFAULT_EXTRA_SYMBOLS,
     DIRECTION_TO_ARROW,
     DIRECTION_TO_LINE,
     NOTE_TO_CIRCLE_FREE_SYMBOL,
     JubeatAnalyserDumpedSection,
     LongNoteEnd,
-    SortedDefaultDict,
     create_sections_from_chart,
-    fraction_to_decimal,
     jubeat_analyser_file_dumper,
 )
 
@@ -156,7 +145,7 @@ def _dump_mono_column_chart(
     # Actual output to file
     file = StringIO()
     file.write(f"// Converted using jubeatools {__version__}\n")
-    file.write(f"// https://github.com/Stepland/jubeatools\n\n")
+    file.write("// https://github.com/Stepland/jubeatools\n\n")
     for _, section in sections.items():
         file.write(section.render(circle_free) + "\n")
 

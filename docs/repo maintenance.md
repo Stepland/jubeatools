@@ -9,9 +9,11 @@
 
 ## Making a new release
 Sanity checks before anything serious happens, from the repo's root :
-1. Run mypy and fix **all** the errors <br> `$ poetry run mypy .`
 1. Format the code <br> `$ poetry run sh ./utils/format_code.sh`
+1. Run checks <br> `$ poetry run sh ./utils/check_code.sh`
 1. Make sure the unit tests pass <br> `$ poetry run pytest`
+1. Fix all encountered errors
+1. Rince and repeat until everythings is ok
 
 Now that this is done you can move on to actually making a new version,
 while still being in the repo's root :

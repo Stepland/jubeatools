@@ -1,4 +1,3 @@
-from functools import wraps
 from importlib import resources
 
 import pytest
@@ -14,4 +13,4 @@ def test_RorataJins_example() -> None:
         with resources.path(data, "RorataJin's example.txt") as p:
             format_ = guess_format(p)
             loader = LOADERS[format_]
-            song = loader(p)
+            _ = loader(p)

@@ -1,19 +1,15 @@
-from collections import ChainMap, defaultdict
-from copy import deepcopy
+from collections import defaultdict
 from dataclasses import dataclass, field
 from decimal import Decimal
 from fractions import Fraction
-from functools import partial
 from io import StringIO
 from itertools import chain, zip_longest
-from math import ceil
-from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Union
 
-from more_itertools import chunked, collapse, intersperse, mark_ends, windowed
+from more_itertools import collapse, intersperse, mark_ends, windowed
 from sortedcontainers import SortedKeyList
 
-from jubeatools.formats.filetypes import ChartFile, JubeatFile
+from jubeatools.formats.filetypes import ChartFile
 from jubeatools.song import (
     BeatsTime,
     BPMEvent,
@@ -31,20 +27,15 @@ from jubeatools.version import __version__
 
 from ..command import dump_command
 from ..dump_tools import (
-    BEATS_TIME_TO_SYMBOL,
-    COMMAND_ORDER,
-    DEFAULT_EXTRA_SYMBOLS,
     DIFFICULTIES,
     DIRECTION_TO_ARROW,
     DIRECTION_TO_LINE,
     NOTE_TO_CIRCLE_FREE_SYMBOL,
     LongNoteEnd,
     SortedDefaultDict,
-    create_sections_from_chart,
-    fraction_to_decimal,
     jubeat_analyser_file_dumper,
 )
-from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
+from ..symbols import NOTE_SYMBOLS
 
 AnyNote = Union[TapNote, LongNote, LongNoteEnd]
 

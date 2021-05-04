@@ -1,15 +1,10 @@
-import warnings
-from collections import ChainMap
-from copy import deepcopy
 from dataclasses import astuple, dataclass
 from decimal import Decimal
 from functools import reduce
-from itertools import chain, product, zip_longest
+from itertools import product, zip_longest
 from pathlib import Path
 from typing import Dict, Iterator, List, Mapping, Optional, Set, Tuple, Union
 
-import constraint
-from more_itertools import collapse, mark_ends
 from parsimonious import Grammar, NodeVisitor, ParseError
 from parsimonious.nodes import Node
 
@@ -33,22 +28,13 @@ from ..files import load_files
 from ..load_tools import (
     CIRCLE_FREE_TO_NOTE_SYMBOL,
     EMPTY_BEAT_SYMBOLS,
-    LONG_ARROWS,
-    LONG_DIRECTION,
     JubeatAnalyserParser,
     UnfinishedLongNote,
-    decimal_to_beats,
     find_long_note_candidates,
-    is_double_column_chart_line,
     is_empty_line,
-    is_simple_solution,
-    long_note_solution_heuristic,
-    parse_double_column_chart_line,
     pick_correct_long_note_candidates,
-    split_double_byte_line,
 )
-from ..symbol_definition import is_symbol_definition, parse_symbol_definition
-from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
+from ..symbols import CIRCLE_FREE_SYMBOLS
 
 
 @dataclass

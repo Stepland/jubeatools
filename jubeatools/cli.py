@@ -1,11 +1,12 @@
 """Command Line Interface"""
+
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import click
 
 from jubeatools.formats import DUMPERS, LOADERS
-from jubeatools.formats.enum import JUBEAT_ANALYSER_FORMATS, Format
+from jubeatools.formats.enum import Format
 from jubeatools.formats.guess import guess_format
 
 

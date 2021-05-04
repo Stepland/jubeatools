@@ -1,22 +1,16 @@
-import re
-import warnings
-from collections import Counter
 from copy import deepcopy
 from dataclasses import astuple, dataclass
 from decimal import Decimal
-from enum import Enum
 from functools import reduce
 from itertools import product
 from pathlib import Path
 from typing import Dict, Iterator, List, Set, Tuple, Union
 
-import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
 from parsimonious.nodes import Node
 
 from jubeatools.song import (
     BeatsTime,
-    BPMEvent,
     Chart,
     LongNote,
     Metadata,
@@ -33,21 +27,16 @@ from ..command import is_command, parse_command
 from ..files import load_files
 from ..load_tools import (
     CIRCLE_FREE_TO_BEATS_TIME,
-    LONG_ARROWS,
-    LONG_DIRECTION,
     JubeatAnalyserParser,
     UnfinishedLongNote,
-    decimal_to_beats,
     find_long_note_candidates,
     is_empty_line,
     is_separator,
-    is_simple_solution,
-    long_note_solution_heuristic,
     pick_correct_long_note_candidates,
     split_double_byte_line,
 )
 from ..symbol_definition import is_symbol_definition, parse_symbol_definition
-from ..symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
+from ..symbols import CIRCLE_FREE_SYMBOLS
 
 mono_column_chart_line_grammar = Grammar(
     r"""
@@ -78,7 +67,9 @@ def is_mono_column_chart_line(line: str) -> bool:
 
 
 def parse_mono_column_chart_line(line: str) -> str:
-    return MonoColumnChartLineVisitor().visit(mono_column_chart_line_grammar.parse(line))  # type: ignore
+    return MonoColumnChartLineVisitor().visit(  # type: ignore
+        mono_column_chart_line_grammar.parse(line)
+    )
 
 
 @dataclass

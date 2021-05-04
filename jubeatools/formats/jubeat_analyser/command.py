@@ -24,9 +24,8 @@ Known hash commands :
   - #bpp              # bytes per panel (2 by default)
 """
 
-from decimal import Decimal
 from numbers import Number
-from typing import Any, Iterable, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple
 
 from parsimonious import Grammar, NodeVisitor, ParseError
 from parsimonious.nodes import Node
@@ -148,5 +147,5 @@ ESCAPE_TABLE = str.maketrans({'"': BACKSLASH + '"', BACKSLASH: BACKSLASH + BACKS
 
 
 def dump_value(value: str) -> str:
-    """backslash-escapes \ and " from a string"""
+    """Escapes backslashes and " from a string"""
     return value.translate(ESCAPE_TABLE)

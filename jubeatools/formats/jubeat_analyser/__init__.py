@@ -16,11 +16,7 @@ The machine-readable variants or these text formats are partially documented
 - http://yosh52.web.fc2.com/jubeat/holdmarker.html
 """
 
-from .memo1.dump import dump_memo1
-from .memo1.load import load_memo1
-from .memo2.dump import dump_memo2
-from .memo2.load import load_memo2
-from .memo.dump import dump_memo
-from .memo.load import load_memo
-from .mono_column.dump import dump_mono_column
-from .mono_column.load import load_mono_column
+from .memo import dump_memo, load_memo
+from .memo1 import dump_memo1, load_memo1
+from .memo2 import dump_memo2, load_memo2
+from .mono_column import dump_mono_column, load_mono_column

@@ -1,7 +1,7 @@
 from io import StringIO
 from itertools import chain
 from pathlib import Path
-from typing import IO, Any, Dict, Iterable, List, Mapping, Tuple, Union
+from typing import Any, Dict, List, Union
 
 import simplejson as json
 from marshmallow import (
@@ -9,12 +9,12 @@ from marshmallow import (
     Schema,
     ValidationError,
     fields,
-    post_load,
     validate,
     validates_schema,
 )
+from multidict import MultiDict
 
-from jubeatools.song import *
+from jubeatools import song as jbt
 from jubeatools.utils import lcm
 
 # v0.x.x long note value :
@@ -134,36 +134,38 @@ def _load_raw_memon(file: Path) -> Dict[str, Any]:
         return res
 
 
-def _load_memon_note_v0(note: dict, resolution: int) -> Union[TapNote, LongNote]:
-    position = NotePosition.from_index(note["n"])
-    time = beats_time_from_ticks(ticks=note["t"], resolution=resolution)
+def _load_memon_note_v0(
+    note: dict, resolution: int
+) -> Union[jbt.TapNote, jbt.LongNote]:
+    position = jbt.NotePosition.from_index(note["n"])
+    time = jbt.beats_time_from_ticks(ticks=note["t"], resolution=resolution)
     if note["l"] > 0:
-        duration = beats_time_from_ticks(ticks=note["l"], resolution=resolution)
-        tail_tip = position + NotePosition(*P_VALUE_TO_X_Y_OFFSET[note["p"]])
-        return LongNote(time, position, duration, tail_tip)
+        duration = jbt.beats_time_from_ticks(ticks=note["l"], resolution=resolution)
+        tail_tip = position + jbt.NotePosition(*P_VALUE_TO_X_Y_OFFSET[note["p"]])
+        return jbt.LongNote(time, position, duration, tail_tip)
     else:
-        return TapNote(time, position)
+        return jbt.TapNote(time, position)
 
 
-def load_memon_legacy(file: Path) -> Song:
+def load_memon_legacy(file: Path) -> jbt.Song:
     raw_memon = _load_raw_memon(file)
     schema = Memon_legacy()
     memon = schema.load(raw_memon)
-    metadata = Metadata(
+    metadata = jbt.Metadata(
         title=memon["metadata"]["title"],
         artist=memon["metadata"]["artist"],
         audio=Path(memon["metadata"]["audio"]),
         cover=Path(memon["metadata"]["cover"]),
     )
-    global_timing = Timing(
-        events=[BPMEvent(time=BeatsTime(0), BPM=memon["metadata"]["BPM"])],
-        beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
+    global_timing = jbt.Timing(
+        events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=memon["metadata"]["BPM"])],
+        beat_zero_offset=jbt.SecondsTime(-memon["metadata"]["offset"]),
     )
-    charts: MultiDict[Chart] = MultiDict()
+    charts: MultiDict[jbt.Chart] = MultiDict()
     for memon_chart in memon["data"]:
         charts.add(
             memon_chart["dif_name"],
-            Chart(
+            jbt.Chart(
                 level=memon_chart["level"],
                 notes=[
                     _load_memon_note_v0(note, memon_chart["resolution"])
@@ -172,28 +174,28 @@ def load_memon_legacy(file: Path) -> Song:
             ),
         )
 
-    return Song(metadata=metadata, charts=charts, global_timing=global_timing)
+    return jbt.Song(metadata=metadata, charts=charts, global_timing=global_timing)
 
 
-def load_memon_0_1_0(file: Path) -> Song:
+def load_memon_0_1_0(file: Path) -> jbt.Song:
     raw_memon = _load_raw_memon(file)
     schema = Memon_0_1_0()
     memon = schema.load(raw_memon)
-    metadata = Metadata(
+    metadata = jbt.Metadata(
         title=memon["metadata"]["title"],
         artist=memon["metadata"]["artist"],
         audio=Path(memon["metadata"]["audio"]),
         cover=Path(memon["metadata"]["cover"]),
     )
-    global_timing = Timing(
-        events=[BPMEvent(time=BeatsTime(0), BPM=memon["metadata"]["BPM"])],
-        beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
+    global_timing = jbt.Timing(
+        events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=memon["metadata"]["BPM"])],
+        beat_zero_offset=jbt.SecondsTime(-memon["metadata"]["offset"]),
     )
-    charts: MultiDict[Chart] = MultiDict()
+    charts: MultiDict[jbt.Chart] = MultiDict()
     for difficulty, memon_chart in memon["data"].items():
         charts.add(
             difficulty,
-            Chart(
+            jbt.Chart(
                 level=memon_chart["level"],
                 notes=[
                     _load_memon_note_v0(note, memon_chart["resolution"])
@@ -202,10 +204,10 @@ def load_memon_0_1_0(file: Path) -> Song:
             ),
         )
 
-    return Song(metadata=metadata, charts=charts, global_timing=global_timing)
+    return jbt.Song(metadata=metadata, charts=charts, global_timing=global_timing)
 
 
-def load_memon_0_2_0(file: Path) -> Song:
+def load_memon_0_2_0(file: Path) -> jbt.Song:
     raw_memon = _load_raw_memon(file)
     schema = Memon_0_2_0()
     memon = schema.load(raw_memon)
@@ -213,24 +215,24 @@ def load_memon_0_2_0(file: Path) -> Song:
     if "preview" in memon["metadata"]:
         start = memon["metadata"]["preview"]["position"]
         length = memon["metadata"]["preview"]["length"]
-        preview = Preview(start, length)
+        preview = jbt.Preview(start, length)
 
-    metadata = Metadata(
+    metadata = jbt.Metadata(
         title=memon["metadata"]["title"],
         artist=memon["metadata"]["artist"],
         audio=Path(memon["metadata"]["audio"]),
         cover=Path(memon["metadata"]["cover"]),
         preview=preview,
     )
-    global_timing = Timing(
-        events=[BPMEvent(time=BeatsTime(0), BPM=memon["metadata"]["BPM"])],
-        beat_zero_offset=SecondsTime(-memon["metadata"]["offset"]),
+    global_timing = jbt.Timing(
+        events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=memon["metadata"]["BPM"])],
+        beat_zero_offset=jbt.SecondsTime(-memon["metadata"]["offset"]),
     )
-    charts: MultiDict[Chart] = MultiDict()
+    charts: MultiDict[jbt.Chart] = MultiDict()
     for difficulty, memon_chart in memon["data"].items():
         charts.add(
             difficulty,
-            Chart(
+            jbt.Chart(
                 level=memon_chart["level"],
                 notes=[
                     _load_memon_note_v0(note, memon_chart["resolution"])
@@ -239,10 +241,10 @@ def load_memon_0_2_0(file: Path) -> Song:
             ),
         )
 
-    return Song(metadata=metadata, charts=charts, global_timing=global_timing)
+    return jbt.Song(metadata=metadata, charts=charts, global_timing=global_timing)
 
 
-def _long_note_tail_value_v0(note: LongNote) -> int:
+def _long_note_tail_value_v0(note: jbt.LongNote) -> int:
     dx = note.tail_tip.x - note.position.x
     dy = note.tail_tip.y - note.position.y
     try:
@@ -253,7 +255,7 @@ def _long_note_tail_value_v0(note: LongNote) -> int:
         ) from None
 
 
-def _get_timing(song: Song) -> Timing:
+def _get_timing(song: jbt.Song) -> jbt.Timing:
     if song.global_timing is not None:
         return song.global_timing
     else:
@@ -262,7 +264,7 @@ def _get_timing(song: Song) -> Timing:
         )
 
 
-def _raise_if_unfit_for_v0(song: Song, version: str) -> None:
+def _raise_if_unfit_for_v0(song: jbt.Song, version: str) -> None:
 
     """Raises an exception if the Song object is ill-formed or contains information
     that cannot be represented in a memon v0.x.y file (includes legacy)"""
@@ -311,21 +313,21 @@ def _dump_to_json(memon: dict) -> bytes:
     return memon_fp.getvalue().encode("utf-8")
 
 
-def _compute_resolution(notes: List[Union[TapNote, LongNote]]) -> int:
+def _compute_resolution(notes: List[Union[jbt.TapNote, jbt.LongNote]]) -> int:
     return lcm(
         *chain(
             iter(note.time.denominator for note in notes),
             iter(
                 note.duration.denominator
                 for note in notes
-                if isinstance(note, LongNote)
+                if isinstance(note, jbt.LongNote)
             ),
         )
     )
 
 
 def _dump_memon_note_v0(
-    note: Union[TapNote, LongNote], resolution: int
+    note: Union[jbt.TapNote, jbt.LongNote], resolution: int
 ) -> Dict[str, int]:
     """converts a note into the {n, t, l, p} form"""
     memon_note = {
@@ -334,7 +336,7 @@ def _dump_memon_note_v0(
         "l": 0,
         "p": 0,
     }
-    if isinstance(note, LongNote):
+    if isinstance(note, jbt.LongNote):
         memon_note["l"] = note.duration.numerator * (
             resolution // note.duration.denominator
         )
@@ -343,7 +345,7 @@ def _dump_memon_note_v0(
     return memon_note
 
 
-def dump_memon_legacy(song: Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
+def dump_memon_legacy(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "legacy")
     timing = _get_timing(song)
@@ -383,7 +385,7 @@ def dump_memon_legacy(song: Song, path: Path, **kwargs: dict) -> Dict[Path, byte
     return {filepath: _dump_to_json(memon)}
 
 
-def dump_memon_0_1_0(song: Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
+def dump_memon_0_1_0(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "v0.1.0")
     timing = _get_timing(song)
@@ -419,7 +421,7 @@ def dump_memon_0_1_0(song: Song, path: Path, **kwargs: dict) -> Dict[Path, bytes
     return {filepath: _dump_to_json(memon)}
 
 
-def dump_memon_0_2_0(song: Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
+def dump_memon_0_2_0(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
 
     _raise_if_unfit_for_v0(song, "v0.2.0")
     timing = _get_timing(song)

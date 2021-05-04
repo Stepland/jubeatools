@@ -1,6 +1,5 @@
 import tempfile
 from pathlib import Path
-from typing import Callable
 
 import hypothesis.strategies as st
 from hypothesis import given

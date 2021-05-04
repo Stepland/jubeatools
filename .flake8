@@ -1,0 +1,32 @@
+[flake8]
+ignore =
+    # break after binary op.
+    # black does its thing and I leave it that way
+    W503
+    # f-string is missing placeholders
+    # really don't want to be bothered for so little
+    F541
+    # whitespace before ':'
+    # let black handle that
+    E203
+    # blank line contains whitespace
+    # let black handle that as well
+    W293
+    # do not assign a lambda expression, use a def
+    # I know when I need that one, thank you very much
+    E731
+exclude =
+    .git
+    __pycache__
+    dist
+    build
+per-file-ignores =
+    # Allow re-exporting in __init__.py files
+    __init__.py: F401
+    # Allow star imports in test example files
+    example*.py: F405, F403
+    # Silence weird false positive on inline comments ...
+    jubeatools/formats/jubeat_analyser/symbols.py: E262
+    # there's a field named "l" in a marshmallow schema
+    jubeatools/formats/memon/memon.py: E741
+max-line-length = 120

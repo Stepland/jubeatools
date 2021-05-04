@@ -1,6 +1,6 @@
 """Collection of tools realted to dumping to jubeat analyser formats"""
+
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from dataclasses import dataclass, field
 from decimal import Decimal
 from fractions import Fraction
@@ -19,7 +19,7 @@ from typing import (
     Union,
 )
 
-from more_itertools import collapse, intersperse, mark_ends, windowed
+from more_itertools import windowed
 from sortedcontainers import SortedDict, SortedKeyList
 
 from jubeatools.formats.filetypes import ChartFile

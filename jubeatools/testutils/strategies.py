@@ -1,11 +1,12 @@
 """
 Hypothesis strategies to generate notes and charts
 """
+
 from decimal import Decimal
-from enum import Enum, Flag, auto
+from enum import Flag, auto
 from itertools import product
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, Optional, Set, Union
 
 import hypothesis.strategies as st
 from multidict import MultiDict

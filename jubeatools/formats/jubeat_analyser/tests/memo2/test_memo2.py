@@ -14,7 +14,6 @@ from jubeatools.song import (
     Chart,
     LongNote,
     Metadata,
-    NotePosition,
     SecondsTime,
     Song,
     TapNote,

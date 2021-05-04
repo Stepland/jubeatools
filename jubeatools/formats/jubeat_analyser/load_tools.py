@@ -1,4 +1,5 @@
 """Collection of parsing tools that are common to all the jubeat analyser formats"""
+
 import re
 import warnings
 from collections import Counter
@@ -6,17 +7,7 @@ from copy import deepcopy
 from dataclasses import astuple, dataclass
 from decimal import Decimal
 from itertools import product, zip_longest
-from typing import (
-    AbstractSet,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import AbstractSet, Dict, List, Optional, Set, Tuple, Union
 
 import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError

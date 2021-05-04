@@ -2,10 +2,7 @@
 Module containing all the load/dump code for all file formats
 """
 
-from pathlib import Path
-from typing import IO, Any, Callable, Dict
-
-from jubeatools.song import Song
+from typing import Dict
 
 from .enum import Format
 from .jubeat_analyser import (
