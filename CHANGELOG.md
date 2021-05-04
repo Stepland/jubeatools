@@ -11,6 +11,9 @@
     - [#memo2]
         - Fix parsing of BPM changes
         - Fix dumping of BPM changes
+- [memon]
+    - Fix handling of paths-type values in metadata
+    - Fix handling of charts with decimal level value
 
 # v0.1.3
 ## Changed

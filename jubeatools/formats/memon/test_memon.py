@@ -32,14 +32,15 @@ def dump_and_load(
         file.seek(0)
         actual_song = load_function(Path(file.name))
 
-    assert expected_song == actual_song
+    assert actual_song == expected_song
 
 
 @st.composite
 def memon_legacy_compatible_song(draw: DrawFunc) -> Song:
-    """Memon versions below v0.2.0 do not support preview metadata"""
+    """Memon versions below v0.2.0 do not support any preview metadata"""
     song: Song = draw(song_strat(TimingOption.GLOBAL, True, NoteOption.LONGS))
     song.metadata.preview = None
+    song.metadata.preview_file = None
     return song
 
 
@@ -58,7 +59,10 @@ def test_memon_0_1_0(song: Song) -> None:
 
 @st.composite
 def memon_0_2_0_compatible_song(draw: DrawFunc) -> Song:
-    return draw(song_strat(TimingOption.GLOBAL, True, NoteOption.LONGS))  # type: ignore
+    """Memon v0.2.0 does not support preview_file"""
+    song: Song = draw(song_strat(TimingOption.GLOBAL, True, NoteOption.LONGS))
+    song.metadata.preview_file = None
+    return song
 
 
 @given(memon_0_2_0_compatible_song())

@@ -2,6 +2,7 @@ import unicodedata
 from functools import reduce
 from math import gcd
 from typing import Callable, Iterable, Optional, TypeVar
+from numbers import Number
 
 
 def single_lcm(a: int, b: int) -> int:
