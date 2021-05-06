@@ -23,6 +23,8 @@ with open("jubeatools/version.py", mode="w") as f:
 
 if args.commit:
     subprocess.run(["git", "reset"])
-    subprocess.run(["git", "add", "pyproject.toml", "jubeatools/version.py"], check=True)
+    subprocess.run(
+        ["git", "add", "pyproject.toml", "jubeatools/version.py"], check=True
+    )
     subprocess.run(["git", "commit", "-m", f"Bump version to {version}"])
     subprocess.run(["git", "tag", f"v{version}"])
