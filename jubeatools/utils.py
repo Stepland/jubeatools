@@ -1,9 +1,12 @@
+"""General utility functions"""
+
 import unicodedata
 from decimal import Decimal
 from fractions import Fraction
 from functools import reduce
 from math import gcd
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional, TypeVar, List, Dict
+from collections import defaultdict
 
 
 def single_lcm(a: int, b: int) -> int:
@@ -24,7 +27,7 @@ def charinfo(c: str) -> str:
 A = TypeVar("A")
 B = TypeVar("B")
 
-
+# Monadic stuff !
 def none_or(c: Callable[[A], B], e: Optional[A]) -> Optional[B]:
     if e is None:
         return None
@@ -35,3 +38,15 @@ def none_or(c: Callable[[A], B], e: Optional[A]) -> Optional[B]:
 def fraction_to_decimal(frac: Fraction) -> Decimal:
     "Thanks stackoverflow ! https://stackoverflow.com/a/40468867/10768117"
     return frac.numerator / Decimal(frac.denominator)
+
+
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+def group_by(elements: List[V], key: Callable[[V], K]) -> Dict[K, List[V]]:
+    res = defaultdict(list)
+    for e in elements:
+        res[key(e)].append(e)
+
+    return res

@@ -50,9 +50,10 @@ def beat_time(
         max_value = None
 
     if max_numerator is not None:
-        max_value = (
-            max_numerator if max_value is None else min(max_numerator, max_value)
-        )
+        if max_value is not None:
+            max_value = min(max_numerator, max_value)
+        else:
+            max_value = max_numerator
 
     numerator = draw(st.integers(min_value=min_value, max_value=max_value))
     return BeatsTime(numerator, denominator)
