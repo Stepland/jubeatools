@@ -4,7 +4,7 @@ from decimal import Decimal
 from fractions import Fraction
 from io import StringIO
 from itertools import chain, zip_longest
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterator, List, Optional, Union, Any
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
 from sortedcontainers import SortedKeyList
@@ -27,13 +27,13 @@ from jubeatools.version import __version__
 
 from ..command import dump_command
 from ..dump_tools import (
-    DIFFICULTIES,
+    DIFFICULTY_NUMBER,
     DIRECTION_TO_ARROW,
     DIRECTION_TO_LINE,
     NOTE_TO_CIRCLE_FREE_SYMBOL,
     LongNoteEnd,
     SortedDefaultDict,
-    jubeat_analyser_file_dumper,
+    make_full_dumper_from_jubeat_analyser_chart_dumper,
 )
 from ..symbols import NOTE_SYMBOLS
 
@@ -241,7 +241,7 @@ def _raise_if_unfit_for_memo2(
         raise ValueError("First BPM event does not happen on beat zero")
 
     if any(
-        not note.tail_is_straight()
+        not note.has_straight_tail()
         for note in chart.notes
         if isinstance(note, LongNote)
     ):
@@ -302,7 +302,7 @@ def _dump_memo2_chart(
 
     # Header
     file.write(dump_command("lev", Decimal(chart.level)) + "\n")
-    file.write(dump_command("dif", DIFFICULTIES.get(difficulty, 1)) + "\n")
+    file.write(dump_command("dif", DIFFICULTY_NUMBER.get(difficulty, 1)) + "\n")
     if metadata.audio is not None:
         file.write(dump_command("m", metadata.audio) + "\n")
     if metadata.title is not None:
@@ -332,21 +332,4 @@ def _dump_memo2_chart(
     return file
 
 
-def _dump_memo2_internal(song: Song, circle_free: bool = False) -> List[ChartFile]:
-    files: List[ChartFile] = []
-    for difficulty, chart in song.charts.items():
-        timing = chart.timing or song.global_timing
-        assert timing is not None
-        contents = _dump_memo2_chart(
-            difficulty,
-            chart,
-            song.metadata,
-            timing,
-            circle_free,
-        )
-        files.append(ChartFile(contents, song, difficulty, chart))
-
-    return files
-
-
-dump_memo2 = jubeat_analyser_file_dumper(_dump_memo2_internal)
+dump_memo2 = make_full_dumper_from_jubeat_analyser_chart_dumper(_dump_memo2_chart)

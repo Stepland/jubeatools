@@ -24,7 +24,7 @@ from jubeatools.song import (
 from jubeatools.utils import none_or
 
 from ..command import is_command, parse_command
-from ..files import load_files
+from ..files import load_folder
 from ..load_tools import (
     CIRCLE_FREE_TO_NOTE_SYMBOL,
     EMPTY_BEAT_SYMBOLS,
@@ -348,6 +348,6 @@ def _load_memo_file(lines: List[str]) -> Song:
 
 
 def load_memo(path: Path) -> Song:
-    files = load_files(path)
+    files = load_folder(path)
     charts = [_load_memo_file(lines) for _, lines in files.items()]
     return reduce(Song.merge, charts)

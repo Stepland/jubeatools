@@ -22,8 +22,10 @@ from typing import (
 from more_itertools import windowed
 from sortedcontainers import SortedDict, SortedKeyList
 
+from jubeatools.formats.adapters import make_dumper_from_chart_file_dumper
 from jubeatools.formats.filetypes import ChartFile
 from jubeatools.formats.typing import Dumper
+from jubeatools.formats.dump_tools import DIFFICULTY_NUMBER
 from jubeatools.song import (
     BeatsTime,
     Chart,
@@ -33,11 +35,14 @@ from jubeatools.song import (
     Song,
     TapNote,
     Timing,
+    Direction,
+    Difficulty,
 )
 from jubeatools.utils import fraction_to_decimal
 
 from .command import dump_command
 from .symbols import CIRCLE_FREE_SYMBOLS, NOTE_SYMBOLS
+from .typing import JubeatAnalyserChartDumper
 
 COMMAND_ORDER = [
     "b",
@@ -66,25 +71,24 @@ BEATS_TIME_TO_CIRCLE_FREE = {
 NOTE_TO_CIRCLE_FREE_SYMBOL = dict(zip(NOTE_SYMBOLS, CIRCLE_FREE_SYMBOLS))
 
 DIRECTION_TO_ARROW = {
-    NotePosition(-1, 0): "＞",  # U+FF1E : FULLWIDTH GREATER-THAN SIGN
-    NotePosition(1, 0): "＜",  # U+FF1C : FULLWIDTH LESS-THAN SIGN
-    NotePosition(0, -1): "∨",  # U+2228 : LOGICAL OR
-    NotePosition(0, 1): "∧",  # U+2227 : LOGICAL AND
+    Direction.RIGHT: "＞",  # U+FF1E : FULLWIDTH GREATER-THAN SIGN
+    Direction.LEFT: "＜",  # U+FF1C : FULLWIDTH LESS-THAN SIGN
+    Direction.DOWN: "∨",  # U+2228 : LOGICAL OR
+    Direction.UP: "∧",  # U+2227 : LOGICAL AND
 }
 
 # do NOT use the regular vertical bar, it will clash with the timing portion
 DIRECTION_TO_LINE = {
-    NotePosition(-1, 0): "―",  # U+2015 : HORIZONTAL BAR
-    NotePosition(1, 0): "―",
-    NotePosition(0, -1): "｜",  # U+FF5C : FULLWIDTH VERTICAL LINE
-    NotePosition(0, 1): "｜",
+    Direction.RIGHT: "―",  # U+2015 : HORIZONTAL BAR
+    Direction.LEFT: "―",
+    Direction.UP: "｜",  # U+FF5C : FULLWIDTH VERTICAL LINE
+    Direction.DOWN: "｜",
 }
 
-DIFFICULTIES = {"BSC": 1, "ADV": 2, "EXT": 3}
-
 # I put a FUCKTON of extra characters just in case some insane chart uses
-# loads of unusual beat divisions. The Vs are left out on purpose since they
-# would be mistaken for long note arrows
+# loads of unusual beat divisions.
+# /!\ The Vs are left out on purpose since they would be mistaken for
+# long note arrows
 DEFAULT_EXTRA_SYMBOLS = (
     "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＷＸＹＺ"
     "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｗｘｙｚ"
@@ -206,7 +210,7 @@ def create_sections_from_chart(
     header = sections[BeatsTime(0)].commands
     header["o"] = int(timing.beat_zero_offset * 1000)
     header["lev"] = Decimal(chart.level)
-    header["dif"] = DIFFICULTIES.get(difficulty, 3)
+    header["dif"] = DIFFICULTY_NUMBER.get(difficulty, 3)
     if metadata.audio is not None:
         header["m"] = metadata.audio
     if metadata.title is not None:
@@ -259,43 +263,28 @@ def create_sections_from_chart(
     return sections
 
 
-def jubeat_analyser_file_dumper(
-    internal_dumper: Callable[[Song, bool], List[ChartFile]]
-) -> Dumper:
-    """Factory function to create a jubeat analyser file dumper from the internal dumper"""
+def make_full_dumper_from_jubeat_analyser_chart_dumper(chart_dumper: JubeatAnalyserChartDumper) -> Dumper:
+    """Factory function to create a fully fledged song dumper from
+    the internal chart dumper of jubeat analyser formats"""
 
-    def dumper(
-        song: Song, path: Path, *, circle_free: bool = False, **kwargs: Any
-    ) -> Dict[Path, bytes]:
-        files = internal_dumper(song, circle_free)
-        res = {}
-        if path.is_dir():
-            title = song.metadata.title or "out"
-            name_format = title + " {difficulty}{dedup_index}.txt"
-        else:
-            name_format = "{base}{dedup_index}{ext}"
-
-        for chartfile in files:
-            i = 0
-            filepath = name_format.format(
-                base=path.parent / path.stem,
-                difficulty=DIFFICULTIES.get(chartfile.difficulty, chartfile.difficulty),
-                dedup_index="" if i == 0 else f"-{i}",
-                ext=path.suffix,
+    def song_dumper(
+        song: Song, *, circle_free: bool = False, **kwargs: Any
+    ) -> List[ChartFile]:
+        files: List[ChartFile] = []
+        for difficulty, chart, timing in song.iter_charts_with_timing():
+            chart_file = chart_dumper(
+                difficulty,
+                chart,
+                song.metadata,
+                timing,
+                circle_free,
             )
-            while filepath in res:
-                i += 1
-                filepath = name_format.format(
-                    base=path.parent / path.stem,
-                    difficulty=DIFFICULTIES.get(
-                        chartfile.difficulty, chartfile.difficulty
-                    ),
-                    dedup_index="" if i == 0 else f"-{i}",
-                    ext=path.suffix,
-                )
+            file_bytes = chart_file.getvalue().encode("shift-jis-2004")
+            files.append(ChartFile(file_bytes, song, difficulty, chart))
 
-            res[Path(filepath)] = chartfile.contents.getvalue().encode("shift-jis-2004")
+        return files
 
-        return res
-
-    return dumper
+    return make_dumper_from_chart_file_dumper(
+        internal_dumper=song_dumper,
+        file_name_template=Path("{title} {difficulty_number}.txt"),
+    )

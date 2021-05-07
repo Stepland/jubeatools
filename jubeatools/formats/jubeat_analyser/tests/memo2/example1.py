@@ -26,7 +26,7 @@ data = (
                 notes=[],
             )
         },
-        global_timing=None,
+        common_timing=None,
     ),
     False,
 )

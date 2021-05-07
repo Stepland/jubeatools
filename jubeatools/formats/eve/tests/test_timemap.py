@@ -14,7 +14,7 @@ def test_that_seconds_at_beat_works_like_the_naive_approach(
 ) -> None:
     time_map = TimeMap.from_timing(timing)
     expected = naive_approach(timing, beat)
-    actual = time_map._frac_seconds_at(beat)
+    actual = time_map.fractional_seconds_at(beat)
     assert actual == expected
 
 
@@ -34,14 +34,11 @@ def naive_approach(beats: song.Timing, beat: song.BeatsTime) -> Fraction:
     first_event = sorted_events[0]
     if first_event.time != song.BeatsTime(0):
         raise ValueError("First BPM event is not on beat zero")
-    
+
     if beat > sorted_events[-1].time:
         events_before = sorted_events
     else:
-        last_index = next(
-            i for i, e in enumerate(sorted_events)
-            if e.time >= beat
-        )
+        last_index = next(i for i, e in enumerate(sorted_events) if e.time >= beat)
         events_before = sorted_events[:last_index]
     total_seconds = Fraction(0)
     current_beat = beat

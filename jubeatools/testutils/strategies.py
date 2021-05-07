@@ -22,6 +22,7 @@ from jubeatools.song import (
     Song,
     TapNote,
     Timing,
+    Difficulty,
 )
 from jubeatools.testutils.typing import DrawFunc
 
@@ -251,7 +252,7 @@ def song(
 
     timing_strat = timing_info(TimingOption.BPM_CHANGES in timing_options)
     note_strat = notes(notes_options)
-    diff_name_strat = st.sampled_from(["BSC", "ADV", "EXT"])
+    diff_name_strat = st.sampled_from(list(d.value for d in Difficulty))
     if extra_diffs:
         # only go for ascii in extra diffs
         # https://en.wikipedia.org/wiki/Basic_Latin_(Unicode_block)
@@ -272,12 +273,12 @@ def song(
         _chart = draw(chart(chart_timing_strat, note_strat))
         charts.add(diff_name, _chart)
 
-    global_timing_start: st.SearchStrategy[Optional[Timing]] = st.none()
+    common_timing_start: st.SearchStrategy[Optional[Timing]] = st.none()
     if TimingOption.GLOBAL in timing_options:
-        global_timing_start = timing_strat
+        common_timing_start = timing_strat
 
     return Song(
         metadata=draw(metadata()),
         charts=charts,
-        global_timing=draw(global_timing_start),
+        common_timing=draw(common_timing_start),
     )

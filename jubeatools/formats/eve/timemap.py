@@ -108,10 +108,10 @@ class TimeMap:
         )
 
     def seconds_at(self, beat: song.BeatsTime) -> song.SecondsTime:
-        frac_seconds = self._frac_seconds_at(beat)
+        frac_seconds = self.fractional_seconds_at(beat)
         return fraction_to_decimal(frac_seconds)
-    
-    def _frac_seconds_at(self, beat):
+
+    def fractional_seconds_at(self, beat: song.BeatsTime) -> Fraction:
         if beat < 0:
             raise ValueError("Can't compute seconds at negative beat")
 

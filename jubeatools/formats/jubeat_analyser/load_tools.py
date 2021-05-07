@@ -13,7 +13,7 @@ import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
 from parsimonious.nodes import Node
 
-from jubeatools.song import BeatsTime, BPMEvent, LongNote, NotePosition
+from jubeatools.song import BeatsTime, BPMEvent, LongNote, NotePosition, Difficulty
 
 from .symbols import (
     CIRCLE_FREE_SYMBOLS,
@@ -24,7 +24,11 @@ from .symbols import (
     NOTE_SYMBOLS,
 )
 
-DIFFICULTIES = {1: "BSC", 2: "ADV", 3: "EXT"}
+DIFFICULTIES = {
+    1: Difficulty.BASIC,
+    2: Difficulty.ADVANCED,
+    3: Difficulty.EXTREME,
+}
 
 SYMBOL_TO_BEATS_TIME = {c: BeatsTime("1/4") * i for i, c in enumerate(NOTE_SYMBOLS)}
 

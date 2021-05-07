@@ -14,7 +14,8 @@ from decimal import Decimal
 from fractions import Fraction
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Iterator, List, Mapping, Optional, Type, Union
+from typing import Any, Callable, Iterator, List, Mapping, Optional, Type, Union, Tuple
+from enum import Enum, auto
 
 from multidict import MultiDict
 
@@ -50,6 +51,17 @@ def convert_other(
 
 @dataclass(frozen=True, order=True)
 class NotePosition:
+    """A specific square on the controller. (0, 0) is the top-left button, x
+    goes right, y goes down.
+
+        x →
+        0 1 2 3
+    y 0 □ □ □ □
+    ↓ 1 □ □ □ □
+      2 □ □ □ □
+      3 □ □ □ □
+    """
+
     x: int
     y: int
 
@@ -61,7 +73,7 @@ class NotePosition:
         return self.x + 4 * self.y
 
     @classmethod
-    def from_index(cls: Type["NotePosition"], index: int) -> "NotePosition":
+    def from_index(cls, index: int) -> NotePosition:
         if not (0 <= index < 16):
             raise ValueError(f"Note position index out of range : {index}")
 
@@ -87,32 +99,53 @@ class LongNote:
     time: BeatsTime
     position: NotePosition
     duration: BeatsTime
-    # tail_tip starting position as absolute position on the
-    # playfield
+    # tail tip starting position as absolute position on the playfield
     tail_tip: NotePosition
 
-    def tail_is_straight(self) -> bool:
+    def has_straight_tail(self) -> bool:
         return (self.position.x == self.tail_tip.x) or (
             self.position.y == self.tail_tip.y
         )
 
-    def tail_direction(self) -> NotePosition:
-        if not self.tail_is_straight():
+    def tail_direction(self) -> Direction:
+        """Direction in which the tail moves"""
+        if not self.has_straight_tail():
             raise ValueError("Can't get tail direction when it's not straight")
-        x, y = astuple(self.tail_tip - self.position)
-        if x == 0:
-            y //= abs(y)
+
+        if self.tail_tip.x == self.position.x:
+            if self.tail_tip.y > self.position.y:
+                return Direction.UP
+            else:
+                return Direction.DOWN
         else:
-            x //= abs(x)
-        return NotePosition(x, y)
+            if self.tail_tip.x > self.position.x:
+                return Direction.LEFT
+            else:
+                return Direction.RIGHT
 
     def positions_covered(self) -> Iterator[NotePosition]:
         direction = self.tail_direction()
+        step = TAIL_DIRECTION_TO_NOTE_TO_TAIL_VECTOR[direction]
         position = self.position
         yield position
         while position != self.tail_tip:
-            position = position + direction
+            position = position + step
             yield position
+
+
+class Direction(Enum):
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
+
+
+TAIL_DIRECTION_TO_NOTE_TO_TAIL_VECTOR = {
+    Direction.UP: NotePosition(0, 1),
+    Direction.DOWN: NotePosition(0, -1),
+    Direction.LEFT: NotePosition(1, 0),
+    Direction.RIGHT: NotePosition(-1, 0),
+}
 
 
 @dataclass(frozen=True)
@@ -150,6 +183,12 @@ class Metadata:
     preview_file: Optional[Path] = None
 
 
+class Difficulty(str, Enum):
+    BASIC = "BSC"
+    ADVANCED = "ADV"
+    EXTREME = "EXT"
+
+
 @dataclass
 class Song:
 
@@ -158,7 +197,7 @@ class Song:
 
     metadata: Metadata
     charts: Mapping[str, Chart] = field(default_factory=MultiDict)
-    global_timing: Optional[Timing] = None
+    common_timing: Optional[Timing] = None
 
     def merge(self, other: "Song") -> "Song":
         if self.metadata != other.metadata:
@@ -171,10 +210,19 @@ class Song:
         charts.extend(self.charts)
         charts.extend(other.charts)
         if (
-            self.global_timing is not None
-            and other.global_timing is not None
-            and self.global_timing != other.global_timing
+            self.common_timing is not None
+            and other.common_timing is not None
+            and self.common_timing != other.common_timing
         ):
             raise ValueError("Can't merge songs with differing global timings")
-        global_timing = self.global_timing or other.global_timing
-        return Song(self.metadata, charts, global_timing)
+        common_timing = self.common_timing or other.common_timing
+        return Song(self.metadata, charts, common_timing)
+
+    def iter_charts_with_timing(self) -> Iterator[Tuple[str, Chart, Timing]]:
+        for dif, chart in self.charts.items():
+            timing = chart.timing or self.common_timing
+            if timing is None:
+                raise ValueError(
+                    f"Neither song nor {dif} chart have any timing information"
+                )
+            yield dif, chart, timing

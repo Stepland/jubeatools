@@ -4,7 +4,7 @@ from fractions import Fraction
 from io import StringIO
 from itertools import zip_longest
 from math import ceil
-from typing import Dict, Iterator, List, Union
+from typing import Dict, Iterator, List, Union, Any
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
 
@@ -29,7 +29,7 @@ from ..dump_tools import (
     JubeatAnalyserDumpedSection,
     LongNoteEnd,
     create_sections_from_chart,
-    jubeat_analyser_file_dumper,
+    make_full_dumper_from_jubeat_analyser_chart_dumper,
 )
 from ..symbols import NOTE_SYMBOLS
 
@@ -196,7 +196,7 @@ def _raise_if_unfit_for_memo1(
         raise ValueError("First BPM event does not happen on beat zero")
 
     if any(
-        not note.tail_is_straight()
+        not note.has_straight_tail()
         for note in chart.notes
         if isinstance(note, LongNote)
     ):
@@ -238,21 +238,4 @@ def _dump_memo1_chart(
     return file
 
 
-def _dump_memo1_internal(song: Song, circle_free: bool) -> List[ChartFile]:
-    files: List[ChartFile] = []
-    for difficulty, chart in song.charts.items():
-        timing = chart.timing or song.global_timing
-        assert timing is not None
-        contents = _dump_memo1_chart(
-            difficulty,
-            chart,
-            song.metadata,
-            timing,
-            circle_free,
-        )
-        files.append(ChartFile(contents, song, difficulty, chart))
-
-    return files
-
-
-dump_memo1 = jubeat_analyser_file_dumper(_dump_memo1_internal)
+dump_memo1 = make_full_dumper_from_jubeat_analyser_chart_dumper(_dump_memo1_chart)

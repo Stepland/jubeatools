@@ -6,7 +6,7 @@ from jubeatools.song import Chart, Song
 
 @dataclass
 class JubeatFile:
-    contents: StringIO
+    contents: bytes
 
 
 @dataclass

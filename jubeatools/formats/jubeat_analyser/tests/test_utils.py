@@ -25,7 +25,7 @@ def memo_compatible_metadata(draw: DrawFunc) -> song.Metadata:
 @st.composite
 def memo_compatible_song(draw: DrawFunc) -> song.Song:
     """Memo only supports one difficulty per file"""
-    diff = draw(st.sampled_from(["BSC", "ADV", "EXT"]))
+    diff = draw(st.sampled_from(list(d.value for d in song.Difficulty)))
     chart = draw(
         jbst.chart(
             timing_strat=jbst.timing_info(bpm_changes=True),

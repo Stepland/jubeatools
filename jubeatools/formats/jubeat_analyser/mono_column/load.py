@@ -24,7 +24,7 @@ from jubeatools.song import (
 from jubeatools.utils import none_or
 
 from ..command import is_command, parse_command
-from ..files import load_files
+from ..files import load_folder
 from ..load_tools import (
     CIRCLE_FREE_TO_BEATS_TIME,
     JubeatAnalyserParser,
@@ -242,9 +242,9 @@ class MonoColumnParser(JubeatAnalyserParser):
 
 
 def load_mono_column(path: Path) -> Song:
-    files = load_files(path)
+    files = load_folder(path)
     charts = [_load_mono_column_file(lines) for _, lines in files.items()]
-    return reduce(lambda a, b: a.merge(b), charts)
+    return reduce(Song.merge, charts)
 
 
 def _load_mono_column_file(lines: List[str]) -> Song:

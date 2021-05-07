@@ -157,7 +157,7 @@ def load_memon_legacy(file: Path) -> jbt.Song:
         audio=Path(memon["metadata"]["audio"]),
         cover=Path(memon["metadata"]["cover"]),
     )
-    global_timing = jbt.Timing(
+    common_timing = jbt.Timing(
         events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=jbt.SecondsTime(-memon["metadata"]["offset"]),
     )
@@ -174,7 +174,7 @@ def load_memon_legacy(file: Path) -> jbt.Song:
             ),
         )
 
-    return jbt.Song(metadata=metadata, charts=charts, global_timing=global_timing)
+    return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
 
 def load_memon_0_1_0(file: Path) -> jbt.Song:
@@ -187,7 +187,7 @@ def load_memon_0_1_0(file: Path) -> jbt.Song:
         audio=Path(memon["metadata"]["audio"]),
         cover=Path(memon["metadata"]["cover"]),
     )
-    global_timing = jbt.Timing(
+    common_timing = jbt.Timing(
         events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=jbt.SecondsTime(-memon["metadata"]["offset"]),
     )
@@ -204,7 +204,7 @@ def load_memon_0_1_0(file: Path) -> jbt.Song:
             ),
         )
 
-    return jbt.Song(metadata=metadata, charts=charts, global_timing=global_timing)
+    return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
 
 def load_memon_0_2_0(file: Path) -> jbt.Song:
@@ -224,7 +224,7 @@ def load_memon_0_2_0(file: Path) -> jbt.Song:
         cover=Path(memon["metadata"]["cover"]),
         preview=preview,
     )
-    global_timing = jbt.Timing(
+    common_timing = jbt.Timing(
         events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=memon["metadata"]["BPM"])],
         beat_zero_offset=jbt.SecondsTime(-memon["metadata"]["offset"]),
     )
@@ -241,7 +241,7 @@ def load_memon_0_2_0(file: Path) -> jbt.Song:
             ),
         )
 
-    return jbt.Song(metadata=metadata, charts=charts, global_timing=global_timing)
+    return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
 
 def _long_note_tail_value_v0(note: jbt.LongNote) -> int:
@@ -256,8 +256,8 @@ def _long_note_tail_value_v0(note: jbt.LongNote) -> int:
 
 
 def _get_timing(song: jbt.Song) -> jbt.Timing:
-    if song.global_timing is not None:
-        return song.global_timing
+    if song.common_timing is not None:
+        return song.common_timing
     else:
         return next(
             chart.timing for chart in song.charts.values() if chart.timing is not None
@@ -269,7 +269,7 @@ def _raise_if_unfit_for_v0(song: jbt.Song, version: str) -> None:
     """Raises an exception if the Song object is ill-formed or contains information
     that cannot be represented in a memon v0.x.y file (includes legacy)"""
 
-    if song.global_timing is None and all(
+    if song.common_timing is None and all(
         chart.timing is None for chart in song.charts.values()
     ):
         raise ValueError("The song has no timing information")

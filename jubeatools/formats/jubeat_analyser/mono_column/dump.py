@@ -1,6 +1,6 @@
 from copy import deepcopy
 from io import StringIO
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Any
 
 from more_itertools import collapse, intersperse, mark_ends
 
@@ -26,7 +26,7 @@ from ..dump_tools import (
     JubeatAnalyserDumpedSection,
     LongNoteEnd,
     create_sections_from_chart,
-    jubeat_analyser_file_dumper,
+    make_full_dumper_from_jubeat_analyser_chart_dumper,
 )
 
 
@@ -100,7 +100,7 @@ def _raise_if_unfit_for_mono_column(chart: Chart, timing: Timing) -> None:
         raise ValueError("First BPM event does not happen on beat zero")
 
     if any(
-        not note.tail_is_straight()
+        not note.has_straight_tail()
         for note in chart.notes
         if isinstance(note, LongNote)
     ):
@@ -151,22 +151,4 @@ def _dump_mono_column_chart(
 
     return file
 
-
-def _dump_mono_column_internal(song: Song, circle_free: bool) -> List[ChartFile]:
-    files: List[ChartFile] = []
-    for difficulty, chart in song.charts.items():
-        timing = chart.timing or song.global_timing
-        assert timing is not None
-        contents = _dump_mono_column_chart(
-            difficulty,
-            chart,
-            song.metadata,
-            timing,
-            circle_free,
-        )
-        files.append(ChartFile(contents, song, difficulty, chart))
-
-    return files
-
-
-dump_mono_column = jubeat_analyser_file_dumper(_dump_mono_column_internal)
+dump_mono_column = make_full_dumper_from_jubeat_analyser_chart_dumper(_dump_mono_column_chart)
