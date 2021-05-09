@@ -5,7 +5,7 @@ from hypothesis import given
 from jubeatools import song
 from jubeatools.formats.eve.timemap import TimeMap
 from jubeatools.testutils import strategies as jbst
-from jubeatools.utils import fraction_to_decimal, group_by
+from jubeatools.utils import group_by
 
 
 @given(jbst.timing_info(bpm_changes=True), jbst.beat_time())

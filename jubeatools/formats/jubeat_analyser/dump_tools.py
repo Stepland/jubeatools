@@ -22,21 +22,22 @@ from typing import (
 from more_itertools import windowed
 from sortedcontainers import SortedDict, SortedKeyList
 
-from jubeatools.formats.adapters import make_dumper_from_chart_file_dumper
+from jubeatools.formats.dump_tools import (
+    DIFFICULTY_NUMBER,
+    make_dumper_from_chart_file_dumper,
+)
 from jubeatools.formats.filetypes import ChartFile
 from jubeatools.formats.typing import Dumper
-from jubeatools.formats.dump_tools import DIFFICULTY_NUMBER
 from jubeatools.song import (
     BeatsTime,
     Chart,
+    Direction,
     LongNote,
     Metadata,
     NotePosition,
     Song,
     TapNote,
     Timing,
-    Direction,
-    Difficulty,
 )
 from jubeatools.utils import fraction_to_decimal
 
@@ -263,7 +264,9 @@ def create_sections_from_chart(
     return sections
 
 
-def make_full_dumper_from_jubeat_analyser_chart_dumper(chart_dumper: JubeatAnalyserChartDumper) -> Dumper:
+def make_full_dumper_from_jubeat_analyser_chart_dumper(
+    chart_dumper: JubeatAnalyserChartDumper,
+) -> Dumper:
     """Factory function to create a fully fledged song dumper from
     the internal chart dumper of jubeat analyser formats"""
 

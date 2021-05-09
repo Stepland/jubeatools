@@ -24,7 +24,6 @@ from jubeatools.song import (
 from jubeatools.utils import none_or
 
 from ..command import is_command, parse_command
-from ..files import load_folder
 from ..load_tools import (
     CIRCLE_FREE_TO_NOTE_SYMBOL,
     EMPTY_BEAT_SYMBOLS,
@@ -35,6 +34,7 @@ from ..load_tools import (
     find_long_note_candidates,
     is_double_column_chart_line,
     is_empty_line,
+    load_folder,
     parse_double_column_chart_line,
     pick_correct_long_note_candidates,
 )

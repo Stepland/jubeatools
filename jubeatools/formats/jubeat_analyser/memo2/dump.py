@@ -4,12 +4,11 @@ from decimal import Decimal
 from fractions import Fraction
 from io import StringIO
 from itertools import chain, zip_longest
-from typing import Dict, Iterator, List, Optional, Union, Any
+from typing import Dict, Iterator, List, Optional, Union
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
 from sortedcontainers import SortedKeyList
 
-from jubeatools.formats.filetypes import ChartFile
 from jubeatools.song import (
     BeatsTime,
     BPMEvent,
@@ -18,7 +17,6 @@ from jubeatools.song import (
     Metadata,
     NotePosition,
     SecondsTime,
-    Song,
     TapNote,
     Timing,
 )

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from io import StringIO
 
 from jubeatools.song import Chart, Song
 

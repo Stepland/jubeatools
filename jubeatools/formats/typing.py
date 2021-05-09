@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Any, Callable, Dict, Protocol, List
+from typing import Any, Callable, Dict, List, Protocol
 
-from jubeatools.song import Song
 from jubeatools.formats.filetypes import ChartFile
+from jubeatools.song import Song
 
 
 # Dumpers take a Song object and a Path hint and give back a dict that maps

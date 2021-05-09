@@ -1,17 +1,15 @@
 from copy import deepcopy
 from io import StringIO
-from typing import Dict, Iterator, List, Any
+from typing import Dict, Iterator, List
 
 from more_itertools import collapse, intersperse, mark_ends
 
-from jubeatools.formats.filetypes import ChartFile
 from jubeatools.song import (
     BeatsTime,
     Chart,
     LongNote,
     Metadata,
     NotePosition,
-    Song,
     TapNote,
     Timing,
 )
@@ -151,4 +149,7 @@ def _dump_mono_column_chart(
 
     return file
 
-dump_mono_column = make_full_dumper_from_jubeat_analyser_chart_dumper(_dump_mono_column_chart)
+
+dump_mono_column = make_full_dumper_from_jubeat_analyser_chart_dumper(
+    _dump_mono_column_chart
+)

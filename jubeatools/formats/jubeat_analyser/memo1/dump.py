@@ -4,18 +4,16 @@ from fractions import Fraction
 from io import StringIO
 from itertools import zip_longest
 from math import ceil
-from typing import Dict, Iterator, List, Union, Any
+from typing import Dict, Iterator, List, Union
 
 from more_itertools import collapse, intersperse, mark_ends, windowed
 
-from jubeatools.formats.filetypes import ChartFile
 from jubeatools.song import (
     BeatsTime,
     Chart,
     LongNote,
     Metadata,
     NotePosition,
-    Song,
     TapNote,
     Timing,
 )

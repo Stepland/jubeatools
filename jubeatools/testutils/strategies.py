@@ -15,6 +15,7 @@ from jubeatools.song import (
     BeatsTime,
     BPMEvent,
     Chart,
+    Difficulty,
     LongNote,
     Metadata,
     NotePosition,
@@ -22,7 +23,6 @@ from jubeatools.song import (
     Song,
     TapNote,
     Timing,
-    Difficulty,
 )
 from jubeatools.testutils.typing import DrawFunc
 

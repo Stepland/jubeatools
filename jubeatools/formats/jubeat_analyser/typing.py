@@ -1,5 +1,5 @@
-from typing import Protocol
 from io import StringIO
+from typing import Protocol
 
 from jubeatools.song import Chart, Metadata, Timing
 

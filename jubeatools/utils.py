@@ -1,12 +1,12 @@
 """General utility functions"""
 
 import unicodedata
+from collections import defaultdict
 from decimal import Decimal
 from fractions import Fraction
 from functools import reduce
 from math import gcd
-from typing import Callable, Optional, TypeVar, List, Dict
-from collections import defaultdict
+from typing import Callable, Dict, List, Optional, TypeVar
 
 
 def single_lcm(a: int, b: int) -> int:
