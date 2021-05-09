@@ -1,19 +1,19 @@
 [flake8]
 ignore =
-    # break after binary op.
-    # black does its thing and I leave it that way
-    W503
-    # f-string is missing placeholders
-    # really don't want to be bothered for so little
-    F541
+    # First category : "ffs flake8 let black do its own formatting"
     # whitespace before ':'
-    # let black handle that
     E203
     # blank line contains whitespace
-    # let black handle that as well
     W293
+    # expected 2 blank lines, found 1
+    E302
+    # break after binary op.
+    W503
+    
+    # Second category : "I know what I'm doing leave me alone"
+    # f-string is missing placeholders
+    F541
     # do not assign a lambda expression, use a def
-    # I know when I need that one, thank you very much
     E731
 exclude =
     .git
