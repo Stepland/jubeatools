@@ -2,4 +2,5 @@
 .eve is the file format used in arcade releases of jubeat
 """
 
-from .eve import load_eve, dump_eve
+from .dump import dump_eve
+from .load import load_eve

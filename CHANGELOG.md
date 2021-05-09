@@ -1,18 +1,20 @@
 # Unreleased
+## Added
+- [eve] 🎉 Add support for .eve as output
 ## Fixed
 - [jubeat-analyser] Prettier rendering of decimal values
 
 # v0.2.0
 ## Added
-- [#mono-column] #circlefree mode accepts non-16ths notes and falls back to normal symbols when needed
+- [mono-column] #circlefree mode accepts non-16ths notes and falls back to normal symbols when needed
 ## Fixed
 - [jubeat-analyser]
     - Raise exception earlier when a mono-column file is detected by the other #memo parsers (based on "--" separator lines)
-    - [#memo] [#memo1]
+    - [memo] [memo1]
         - Fix incorrect handling of mid-chart `t=` and `b=` commands
         - Prettify rendering by adding more blank lines between sections
-    - [#memo1] Fix dumping of chart with bpm changes happening on beat times that aren't multiples of 1/4
-    - [#memo2]
+    - [memo1] Fix dumping of chart with bpm changes happening on beat times that aren't multiples of 1/4
+    - [memo2]
         - Fix parsing of BPM changes
         - Fix dumping of BPM changes
 - [memon]
@@ -24,7 +26,7 @@
 - [jubeat-analyser] Use "EXT" instead of "?" as the fallback difficulty name when loading
 ## Fixed
 - [memon] Fix TypeError that would occur when trying to convert
-- [#memo2] Fix rendering missing blank lines between blocks, while technically still valid files, this made files rendered by jubeatools absolutely fugly and very NOT human friendly
+- [memo2] Fix rendering missing blank lines between blocks, while technically still valid files, this made files rendered by jubeatools absolutely fugly and very NOT human friendly
 
 # v0.1.2
 ## Fixed
@@ -34,7 +36,7 @@
 
 # v0.1.1
 ## Fixed
-- [#memo2] Loading a file that did not specify any offset (neither by `o=...`, `r=...` nor `[...]` commands) would trigger a TypeError, not anymore ! Offset now defaults to zero.
+- [memo2] Loading a file that did not specify any offset (neither by `o=...`, `r=...` nor `[...]` commands) would trigger a TypeError, not anymore ! Offset now defaults to zero.
 
 # v0.1.0
 - Initial Release
