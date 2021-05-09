@@ -230,7 +230,12 @@ def find_long_note_candidates(
         note_candidates = set()
         𝛿pos = LONG_DIRECTION[symbol]
         candidate = NotePosition(x, y) + 𝛿pos
-        while 0 <= candidate.x < 4 and 0 <= candidate.y < 4:
+        while True:
+            try:
+                candidate = NotePosition.from_raw_position(candidate)
+            except ValueError:
+                break
+
             if candidate not in should_skip:
                 new_symbol = bloc[candidate.y][candidate.x]
                 if new_symbol in note_symbols:

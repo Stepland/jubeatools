@@ -141,7 +141,9 @@ def _load_memon_note_v0(
     time = jbt.beats_time_from_ticks(ticks=note["t"], resolution=resolution)
     if note["l"] > 0:
         duration = jbt.beats_time_from_ticks(ticks=note["l"], resolution=resolution)
-        tail_tip = position + jbt.NotePosition(*P_VALUE_TO_X_Y_OFFSET[note["p"]])
+        p_value = note["p"]
+        𝛿x, 𝛿y = P_VALUE_TO_X_Y_OFFSET[p_value]
+        tail_tip = jbt.NotePosition.from_raw_position(position + jbt.Position(𝛿x, 𝛿y))
         return jbt.LongNote(time, position, duration, tail_tip)
     else:
         return jbt.TapNote(time, position)
