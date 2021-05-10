@@ -151,34 +151,42 @@ def notes(draw: DrawFunc, options: NoteOption) -> Set[Union[TapNote, LongNote]]:
 
 
 @st.composite
-def bpm_strat(draw: DrawFunc) -> Decimal:
+def bpms(draw: DrawFunc) -> Decimal:
     d: Decimal = draw(st.decimals(min_value=1, max_value=1000, places=3))
     return d
 
 
 @st.composite
-def bpm_change(draw: DrawFunc) -> BPMEvent:
+def bpm_changes(
+    draw: DrawFunc, bpm_strat: st.SearchStrategy[Decimal] = bpms()
+) -> BPMEvent:
     time = draw(beat_time(min_section=1, max_section=10))
-    bpm = draw(bpm_strat())
+    bpm = draw(bpm_strat)
     return BPMEvent(time, bpm)
 
 
 @st.composite
 def timing_info(
     draw: DrawFunc,
-    bpm_changes: bool = True,
+    with_bpm_changes: bool = True,
+    bpm_strat: st.SearchStrategy[Decimal] = bpms(),
+    beat_zero_offset_strat: st.SearchStrategy[Decimal] = st.decimals(
+        min_value=0, max_value=20, places=3
+    ),
 ) -> Timing:
-    first_bpm = draw(bpm_strat())
+    first_bpm = draw(bpm_strat)
     first_event = BPMEvent(BeatsTime(0), first_bpm)
     events = [first_event]
-    if bpm_changes:
-        raw_bpm_changes = st.lists(bpm_change(), unique_by=get_bpm_change_time)
+    if with_bpm_changes:
+        raw_bpm_changes = st.lists(
+            bpm_changes(bpm_strat), unique_by=get_bpm_change_time
+        )
         sorted_bpm_changes = raw_bpm_changes.map(
             lambda l: sorted(l, key=get_bpm_change_time)
         )
         other_events = draw(sorted_bpm_changes)
         events += other_events
-    beat_zero_offset = draw(st.decimals(min_value=0, max_value=20, places=3))
+    beat_zero_offset = draw(beat_zero_offset_strat)
     return Timing(events=events, beat_zero_offset=beat_zero_offset)
 
 

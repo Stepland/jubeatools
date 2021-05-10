@@ -1,5 +1,9 @@
+from decimal import Decimal
+from fractions import Fraction
 from pathlib import Path
-from typing import Dict, Iterable, Optional, Protocol, TypeVar
+from typing import Dict, Iterable, Protocol, TypeVar, Union
+
+from jubeatools import song
 
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
@@ -39,3 +43,15 @@ def make_folder_loader(glob_pattern: str, file_loader: FileLoader) -> FolderLoad
         return files
 
     return folder_loader
+
+
+# TODO
+# use numbers.Number instead when this mypy issue is finally fixed
+# https://github.com/python/mypy/issues/3186
+Number = Union[int, float, Decimal, Fraction]
+
+
+def round_beats(beats: Number) -> song.BeatsTime:
+    """Rounds a given beat value to the nearest 1/240th"""
+    nearest_240th = round(beats * 240)
+    return song.BeatsTime(nearest_240th, 240)

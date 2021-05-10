@@ -14,7 +14,7 @@ import constraint
 from parsimonious import Grammar, NodeVisitor, ParseError
 from parsimonious.nodes import Node
 
-from jubeatools.formats.load_tools import make_folder_loader
+from jubeatools.formats.load_tools import make_folder_loader, round_beats
 from jubeatools.song import BeatsTime, BPMEvent, Difficulty, LongNote, NotePosition
 
 from .symbols import (
@@ -185,11 +185,6 @@ def split_double_byte_line(line: str) -> List[str]:
     return symbols
 
 
-def decimal_to_beats(decimal_time: Decimal) -> BeatsTime:
-    nearest_240th = round(decimal_time * 240)
-    return BeatsTime(nearest_240th, 240)
-
-
 @dataclass(frozen=True)
 class UnfinishedLongNote:
     time: BeatsTime
@@ -331,7 +326,7 @@ class JubeatAnalyserParser:
             method()
 
     def do_b(self, value: str) -> None:
-        self.beats_per_section = decimal_to_beats(Decimal(value))
+        self.beats_per_section = round_beats(Decimal(value))
 
     def do_m(self, value: str) -> None:
         self.music = value
@@ -432,7 +427,7 @@ class JubeatAnalyserParser:
                 f"{self.beats_per_section} beats, a symbol cannot happen "
                 f"afterwards at {timing}"
             )
-        self.symbols[symbol] = decimal_to_beats(timing)
+        self.symbols[symbol] = round_beats(timing)
 
     def is_short_line(self, line: str) -> bool:
         return len(line.encode("shift-jis-2004")) < self.bytes_per_panel * 4

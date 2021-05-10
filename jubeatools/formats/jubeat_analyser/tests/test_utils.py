@@ -1,12 +1,11 @@
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
 
-from hypothesis import note as hypothesis_note
 from hypothesis import strategies as st
 
 from jubeatools import song
-from jubeatools.formats import DUMPERS, LOADERS, Format
-from jubeatools.formats.guess import guess_format
 from jubeatools.testutils import strategies as jbst
 from jubeatools.testutils.typing import DrawFunc
 
@@ -28,7 +27,7 @@ def memo_compatible_song(draw: DrawFunc) -> song.Song:
     diff = draw(st.sampled_from(list(d.value for d in song.Difficulty)))
     chart = draw(
         jbst.chart(
-            timing_strat=jbst.timing_info(bpm_changes=True),
+            timing_strat=jbst.timing_info(with_bpm_changes=True),
             notes_strat=jbst.notes(jbst.NoteOption.LONGS),
         )
     )
@@ -39,17 +38,7 @@ def memo_compatible_song(draw: DrawFunc) -> song.Song:
     )
 
 
-def load_and_dump_then_check(f: Format, song: song.Song, circle_free: bool) -> None:
-    loader = LOADERS[f]
-    dumper = DUMPERS[f]
+@contextmanager
+def temp_file_named_txt() -> Iterator[Path]:
     with tempfile.NamedTemporaryFile(suffix=".txt") as dst:
-        path = Path(dst.name)
-        files = dumper(song, path, circle_free=circle_free)
-        assert len(files) == 1
-        bytes_ = files.popitem()[1]
-        hypothesis_note(f"Chart file :\n{bytes_.decode('shift-jis-2004')}")
-        dst.write(bytes_)
-        dst.flush()
-        assert guess_format(path) == f
-        recovered_song = loader(path)
-        assert recovered_song == song
+        yield Path(dst.name)

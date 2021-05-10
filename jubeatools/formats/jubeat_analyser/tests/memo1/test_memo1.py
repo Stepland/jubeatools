@@ -11,8 +11,9 @@ from jubeatools.formats.jubeat_analyser.memo1.dump import _dump_memo1_chart
 from jubeatools.formats.jubeat_analyser.memo1.load import Memo1Parser
 from jubeatools.testutils.strategies import NoteOption
 from jubeatools.testutils.strategies import notes as notes_strat
+from jubeatools.testutils.test_patterns import dump_and_load_then_compare
 
-from ..test_utils import load_and_dump_then_check, memo_compatible_song
+from ..test_utils import memo_compatible_song, temp_file_named_txt
 from . import example1
 
 
@@ -41,4 +42,10 @@ def test_that_notes_roundtrip(notes: List[Union[song.TapNote, song.LongNote]]) -
 @given(memo_compatible_song(), st.booleans())
 @example(*example1.data)
 def test_that_full_chart_roundtrips(song: song.Song, circle_free: bool) -> None:
-    load_and_dump_then_check(Format.MEMO_1, song, circle_free)
+    dump_and_load_then_compare(
+        Format.MEMO_1,
+        song,
+        temp_path=temp_file_named_txt(),
+        bytes_decoder=lambda b: b.decode("shift-jis-2004"),
+        dump_options={"circle_free": circle_free},
+    )
