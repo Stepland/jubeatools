@@ -8,7 +8,7 @@ from jubeatools.testutils import strategies as jbst
 from jubeatools.utils import group_by
 
 
-@given(jbst.timing_info(bpm_changes=True), jbst.beat_time())
+@given(jbst.timing_info(with_bpm_changes=True), jbst.beat_time())
 def test_that_seconds_at_beat_works_like_the_naive_approach(
     timing: song.Timing, beat: song.BeatsTime
 ) -> None:

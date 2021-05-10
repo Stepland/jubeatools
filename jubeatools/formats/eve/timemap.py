@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import List
+from typing import List, Union
 
 from more_itertools import windowed
 from sortedcontainers import SortedKeyList
 
 from jubeatools import song
+from jubeatools.formats.load_tools import round_beats
 from jubeatools.utils import fraction_to_decimal, group_by
 
 
@@ -124,7 +125,7 @@ class TimeMap:
         seconds_since_last_event = (60 * beats_since_last_event) / bpm_change.BPM
         return bpm_change.seconds + seconds_since_last_event
 
-    def beats_at(self, seconds: song.SecondsTime) -> song.BeatsTime:
+    def beats_at(self, seconds: Union[song.SecondsTime, Fraction]) -> song.BeatsTime:
         if seconds < self.beat_zero_offset:
             raise ValueError(
                 f"Can't compute beat time at {seconds} seconds, since it predates "
@@ -142,3 +143,12 @@ class TimeMap:
             60
         )
         return bpm_change.beats + beats_since_last_event
+
+    def convert_to_timing_info(self) -> song.Timing:
+        return song.Timing(
+            events=[
+                song.BPMEvent(time=round_beats(e.beats), BPM=fraction_to_decimal(e.BPM))
+                for e in self.events_by_beats
+            ],
+            beat_zero_offset=self.beat_zero_offset,
+        )

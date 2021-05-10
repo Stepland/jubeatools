@@ -44,6 +44,7 @@ def convert_other(
 
     return wrapped
 
+
 @dataclass(frozen=True, order=True)
 class Position:
     """2D integer vector"""
@@ -53,7 +54,7 @@ class Position:
 
     def __iter__(self) -> Iterator[int]:
         yield from astuple(self)
-    
+
     @convert_other
     def __add__(self, other: Position) -> Position:
         return Position(self.x + other.x, self.y + other.y)
@@ -61,10 +62,10 @@ class Position:
     @convert_other
     def __sub__(self, other: Position) -> Position:
         return Position(self.x - other.x, self.y - other.y)
-    
+
     def __mul__(self, other: int) -> Position:
         return Position(self.x * other, self.y * other)
-    
+
     __rmul__ = __mul__
 
 
@@ -79,7 +80,7 @@ class NotePosition(Position):
     ↓ 1 □ □ □ □
       2 □ □ □ □
       3 □ □ □ □
-    
+
     The main difference with Position is that x and y MUST be between 0 and 3
     """
 
@@ -99,7 +100,7 @@ class NotePosition(Position):
             raise ValueError(f"Note position index out of range : {index}")
 
         return cls(x=index % 4, y=index // 4)
-    
+
     @classmethod
     def from_raw_position(cls, pos: Position) -> NotePosition:
         return cls(x=pos.x, y=pos.y)

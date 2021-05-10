@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Enum
+import math
 from fractions import Fraction
 from functools import singledispatch
 from pathlib import Path
-from typing import List, Union
+from typing import List
 
 from more_itertools import numeric_range
 
@@ -13,8 +12,8 @@ from jubeatools import song
 from jubeatools.formats.dump_tools import make_dumper_from_chart_file_dumper
 from jubeatools.formats.filetypes import ChartFile
 
+from .commons import AnyNote, Command, Event, ticks_at_beat
 from .timemap import TimeMap
-from .commons import AnyNote, Command, Event, DIRECTION_TO_VALUE
 
 
 def _dump_eve(song: song.Song, **kwargs: dict) -> List[ChartFile]:
@@ -28,7 +27,7 @@ def _dump_eve(song: song.Song, **kwargs: dict) -> List[ChartFile]:
 
 
 dump_eve = make_dumper_from_chart_file_dumper(
-    internal_dumper=_dump_eve, file_name_template=Path("{difficulty_index}.eve")
+    internal_dumper=_dump_eve, file_name_template=Path("{difficulty:l}.eve")
 )
 
 
@@ -41,16 +40,18 @@ def dump_chart(notes: List[AnyNote], timing: song.Timing) -> str:
 
 
 def make_note_events(notes: List[AnyNote], time_map: TimeMap) -> List[Event]:
-    return [Event.from_note(note, time_map) for note in notes]
+    return [make_note_event(note, time_map) for note in notes]
 
 
 @singledispatch
 def make_note_event(note: AnyNote, time_map: TimeMap) -> Event:
     raise NotImplementedError(f"Unknown note type : {type(note)}")
 
+
 @make_note_event.register
 def make_tap_note_event(note: song.TapNote, time_map: TimeMap) -> Event:
     return Event.from_tap_note(note, time_map)
+
 
 @make_note_event.register
 def make_long_note_event(note: song.LongNote, time_map: TimeMap) -> Event:
@@ -70,8 +71,12 @@ def make_timing_events(
 
 def make_bpm_event(bpm_change: song.BPMEvent, time_map: TimeMap) -> Event:
     ticks = ticks_at_beat(bpm_change.time, time_map)
-    bpm_value = round(60 * 10 ** 6 / Fraction(bpm_change.BPM))
+    bpm_value = bpm_to_value(Fraction(bpm_change.BPM))
     return Event(time=ticks, command=Command.TEMPO, value=bpm_value)
+
+
+def bpm_to_value(bpm: Fraction) -> int:
+    return math.floor(60 * 10 ** 6 / bpm)
 
 
 def choose_end_beat(notes: List[AnyNote]) -> song.BeatsTime:
@@ -93,7 +98,7 @@ def compute_last_note_beat(notes: List[AnyNote]) -> song.BeatsTime:
         n.time + n.duration for n in notes if isinstance(n, song.LongNote)
     )
     all_note_times = note_times | long_note_ends
-    return max(all_note_times)
+    return max(all_note_times, default=song.BeatsTime(0))
 
 
 def make_end_event(end_beat: song.BeatsTime, time_map: TimeMap) -> Event:
