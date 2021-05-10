@@ -1,7 +1,8 @@
 # Unreleased
 ## Added
-- [eve] 🎉 Add support for .eve as output
+- [eve] 🎉 .eve support !
 ## Fixed
+- Fix infinite loop that would occur when choosing a deduplicated filename
 - [jubeat-analyser] Prettier rendering of decimal values
 
 # v0.2.0

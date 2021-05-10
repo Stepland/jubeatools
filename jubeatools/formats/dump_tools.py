@@ -1,3 +1,4 @@
+import string
 from itertools import count
 from pathlib import Path
 from typing import AbstractSet, Any, Dict, Iterator, TypedDict
@@ -31,13 +32,15 @@ def make_dumper_from_chart_file_dumper(
         res: Dict[Path, bytes] = {}
         if path.is_dir():
             file_path = file_name_template
+            parent = path
         else:
             file_path = path
+            parent = path.parent
 
         name_format = f"{file_path.stem}{{dedup}}{file_path.suffix}"
         files = internal_dumper(song, **kwargs)
         for chartfile in files:
-            filepath = choose_file_path(chartfile, name_format, path.parent, res.keys())
+            filepath = choose_file_path(chartfile, name_format, parent, res.keys())
             res[filepath] = chartfile.contents
 
         return res
@@ -62,12 +65,14 @@ def iter_possible_paths(
 ) -> Iterator[Path]:
     for dedup_index in count(start=0):
         params = extract_format_params(chart_file, dedup_index)
-        filename = name_format.format(**params).strip()
+        formatter = BetterStringFormatter()
+        filename = formatter.format(name_format, **params).strip()
         yield parent / filename
 
 
 class FormatParameters(TypedDict, total=False):
     title: str
+    # uppercase BSC ADV EXT
     difficulty: str
     # 0-based
     difficulty_index: int
@@ -82,5 +87,22 @@ def extract_format_params(chartfile: ChartFile, dedup_index: int) -> FormatParam
         difficulty=chartfile.difficulty,
         difficulty_index=DIFFICULTY_INDEX.get(chartfile.difficulty, 3),
         difficulty_number=DIFFICULTY_NUMBER.get(chartfile.difficulty, 4),
-        dedup="" if dedup_index else f"-{dedup_index}",
+        dedup="" if dedup_index == 0 else f"-{dedup_index}",
     )
+
+
+class BetterStringFormatter(string.Formatter):
+    """Enables the use of 'u' and 'l' suffixes in string format specifiers to
+    convert the string to uppercase or lowercase
+    Thanks stackoverflow ! https://stackoverflow.com/a/57570269/10768117
+    """
+
+    def format_field(self, value: Any, format_spec: str) -> str:
+        if isinstance(value, str):
+            if format_spec.endswith("u"):
+                value = value.upper()
+                format_spec = format_spec[:-1]
+            elif format_spec.endswith("l"):
+                value = value.lower()
+                format_spec = format_spec[:-1]
+        return super().format(value, format_spec)
