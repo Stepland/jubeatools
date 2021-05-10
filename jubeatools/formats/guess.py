@@ -1,7 +1,6 @@
 import json
 import re
 from pathlib import Path
-from typing import Any, List
 
 from .enum import Format
 
@@ -10,28 +9,26 @@ def guess_format(path: Path) -> Format:
     if path.is_dir():
         raise ValueError("Can't guess chart format for a folder")
 
-    # The file is valid json => memon
     try:
-        with path.open() as f:
-            obj = json.load(f)
-    except (json.JSONDecodeError, UnicodeDecodeError):
+        return recognize_memon_version(path)
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
         pass
-    else:
-        return guess_memon_version(obj)
 
-    # The file is valid shift-jis-2004 => jubeat analyser
     try:
-        with path.open(encoding="shift-jis-2004") as f:
-            lines = f.readlines()
-    except UnicodeDecodeError:
+        return recognize_jubeat_analyser_format(path)
+    except (UnicodeDecodeError, ValueError):
         pass
-    else:
-        return guess_jubeat_analyser_format(lines)
+
+    if looks_like_eve(path):
+        return Format.EVE
 
     raise ValueError("Unrecognized file format")
 
 
-def guess_memon_version(obj: Any) -> Format:
+def recognize_memon_version(path: Path) -> Format:
+    with path.open() as f:
+        obj = json.load(f)
+
     try:
         version = obj["version"]
     except KeyError:
@@ -71,7 +68,10 @@ def _dirty_jba_line_strip(line: str) -> str:
     return COMMENT.sub("", line).strip()
 
 
-def guess_jubeat_analyser_format(lines: List[str]) -> Format:
+def recognize_jubeat_analyser_format(path: Path) -> Format:
+    with path.open(encoding="shift-jis-2004") as f:
+        lines = f.readlines()
+
     saw_jubeat_analyser_commands = False
     for raw_line in lines:
         line = _dirty_jba_line_strip(raw_line)
@@ -90,3 +90,44 @@ def guess_jubeat_analyser_format(lines: List[str]) -> Format:
         return Format.MONO_COLUMN
     else:
         raise ValueError("Unrecognized file format")
+
+
+def looks_like_eve(path: Path) -> bool:
+    with path.open(encoding="ascii") as f:
+        line = f.readline()
+        if line.strip():
+            return looks_like_eve_line(next(f))
+    
+    return False
+
+
+EVE_COMMANDS = {
+    "END",
+    "MEASURE",
+    "HAKU",
+    "PLAY",
+    "LONG",
+    "TEMPO",
+}
+
+
+def looks_like_eve_line(line: str) -> bool:
+    columns = line.split(",")
+    if len(columns) != 3:
+        return False
+
+    raw_tick, raw_command, raw_value = map(str.strip, columns)
+    try:
+        int(raw_tick)
+    except Exception:
+        return False
+
+    if raw_command not in EVE_COMMANDS:
+        return False
+
+    try:
+        int(raw_value)
+    except Exception:
+        return False
+
+    return True
