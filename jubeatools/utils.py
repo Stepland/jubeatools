@@ -6,7 +6,7 @@ from decimal import Decimal
 from fractions import Fraction
 from functools import reduce
 from math import gcd
-from typing import Callable, Dict, List, Optional, TypeVar
+from typing import Callable, Dict, Hashable, List, Optional, TypeVar
 
 
 def single_lcm(a: int, b: int) -> int:
@@ -40,7 +40,7 @@ def fraction_to_decimal(frac: Fraction) -> Decimal:
     return frac.numerator / Decimal(frac.denominator)
 
 
-K = TypeVar("K")
+K = TypeVar("K", bound=Hashable)
 V = TypeVar("V")
 
 
