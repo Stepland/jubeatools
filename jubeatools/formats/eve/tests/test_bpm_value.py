@@ -3,8 +3,7 @@ import math
 from hypothesis import given
 from hypothesis import strategies as st
 
-from ..dump import bpm_to_value
-from ..load import value_to_truncated_bpm
+from ..commons import bpm_to_value, value_to_truncated_bpm
 
 
 @given(st.integers(min_value=1, max_value=6 * 10 ** 7))

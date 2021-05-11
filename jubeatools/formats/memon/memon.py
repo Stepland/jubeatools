@@ -149,8 +149,8 @@ def _load_memon_note_v0(
         return jbt.TapNote(time, position)
 
 
-def load_memon_legacy(file: Path) -> jbt.Song:
-    raw_memon = _load_raw_memon(file)
+def load_memon_legacy(path: Path, **kwargs: Any) -> jbt.Song:
+    raw_memon = _load_raw_memon(path)
     schema = Memon_legacy()
     memon = schema.load(raw_memon)
     metadata = jbt.Metadata(
@@ -179,8 +179,8 @@ def load_memon_legacy(file: Path) -> jbt.Song:
     return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
 
-def load_memon_0_1_0(file: Path) -> jbt.Song:
-    raw_memon = _load_raw_memon(file)
+def load_memon_0_1_0(path: Path, **kwargs: Any) -> jbt.Song:
+    raw_memon = _load_raw_memon(path)
     schema = Memon_0_1_0()
     memon = schema.load(raw_memon)
     metadata = jbt.Metadata(
@@ -209,8 +209,8 @@ def load_memon_0_1_0(file: Path) -> jbt.Song:
     return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
 
-def load_memon_0_2_0(file: Path) -> jbt.Song:
-    raw_memon = _load_raw_memon(file)
+def load_memon_0_2_0(path: Path, **kwargs: Any) -> jbt.Song:
+    raw_memon = _load_raw_memon(path)
     schema = Memon_0_2_0()
     memon = schema.load(raw_memon)
     preview = None

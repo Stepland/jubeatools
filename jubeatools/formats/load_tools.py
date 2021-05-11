@@ -51,7 +51,8 @@ def make_folder_loader(glob_pattern: str, file_loader: FileLoader) -> FolderLoad
 Number = Union[int, float, Decimal, Fraction]
 
 
-def round_beats(beats: Number) -> song.BeatsTime:
-    """Rounds a given beat value to the nearest 1/240th"""
-    nearest_240th = round(beats * 240)
-    return song.BeatsTime(nearest_240th, 240)
+def round_beats(beats: Number, denominator: int = 240) -> song.BeatsTime:
+    """Rounds a given beat value to the nearest given division (default to
+    nearest 1/240th"""
+    nearest = round(beats * denominator)
+    return song.BeatsTime(nearest, denominator)

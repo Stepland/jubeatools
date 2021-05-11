@@ -19,7 +19,6 @@ from jubeatools.song import (
     TapNote,
     Timing,
 )
-from jubeatools.testutils.strategies import NoteOption
 from jubeatools.testutils.strategies import notes as notes_strat
 from jubeatools.testutils.test_patterns import dump_and_load_then_compare
 
@@ -27,7 +26,7 @@ from ..test_utils import memo_compatible_song, temp_file_named_txt
 from . import example1, example2, example3
 
 
-@given(notes_strat(NoteOption.LONGS))
+@given(notes_strat())
 def test_that_notes_roundtrip(notes: List[Union[TapNote, LongNote]]) -> None:
     timing = Timing(
         events=[BPMEvent(BeatsTime(0), Decimal(120))], beat_zero_offset=SecondsTime(0)

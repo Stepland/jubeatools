@@ -4,7 +4,7 @@ from decimal import Decimal
 from functools import reduce
 from itertools import product
 from pathlib import Path
-from typing import Dict, Iterator, List, Mapping, Set, Tuple, Union
+from typing import Any, Dict, Iterator, List, Mapping, Set, Tuple, Union
 
 from more_itertools import mark_ends
 
@@ -338,7 +338,7 @@ def _load_memo1_file(lines: List[str]) -> Song:
     return Song(metadata=metadata, charts=charts)
 
 
-def load_memo1(path: Path) -> Song:
+def load_memo1(path: Path, **kwargs: Any) -> Song:
     files = load_folder(path)
     charts = [_load_memo1_file(lines) for _, lines in files.items()]
     return reduce(Song.merge, charts)

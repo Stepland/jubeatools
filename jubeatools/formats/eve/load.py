@@ -1,9 +1,7 @@
-import math
 from decimal import Decimal
-from fractions import Fraction
 from functools import reduce
 from pathlib import Path
-from typing import Iterator, List, Optional
+from typing import Any, Iterator, List, Optional
 
 from jubeatools import song
 from jubeatools.formats.load_tools import make_folder_loader, round_beats
@@ -16,13 +14,14 @@ from .commons import (
     EveLong,
     Event,
     ticks_to_seconds,
+    value_to_truncated_bpm,
 )
 from .timemap import BPMAtSecond, TimeMap
 
 
-def load_eve(path: Path) -> song.Song:
+def load_eve(path: Path, *, beat_snap: int = 240, **kwargs: Any) -> song.Song:
     files = load_folder(path)
-    charts = [_load_eve(l, p) for p, l in files.items()]
+    charts = [_load_eve(l, p, beat_snap=beat_snap) for p, l in files.items()]
     return reduce(song.Song.merge, charts)
 
 
@@ -33,7 +32,7 @@ def load_file(path: Path) -> List[str]:
 load_folder = make_folder_loader("*.eve", load_file)
 
 
-def _load_eve(lines: List[str], file_path: Path) -> song.Song:
+def _load_eve(lines: List[str], file_path: Path, *, beat_snap: int = 240) -> song.Song:
     events = list(iter_events(lines))
     events_by_command = group_by(events, lambda e: e.command)
     bpms = [
@@ -52,7 +51,7 @@ def _load_eve(lines: List[str], file_path: Path) -> song.Song:
         for e in events_by_command[Command.LONG]
     ]
     all_notes = sorted(tap_notes + long_notes, key=lambda n: (n.time, n.position))
-    timing = time_map.convert_to_timing_info()
+    timing = time_map.convert_to_timing_info(beat_snap=beat_snap)
     chart = song.Chart(level=Decimal(0), timing=timing, notes=all_notes)
     dif = guess_difficulty(file_path.stem) or song.Difficulty.EXTREME
     return song.Song(metadata=song.Metadata(), charts={dif: chart})
@@ -101,34 +100,6 @@ def parse_event(line: str) -> Event:
         )
 
     return Event(tick, command, value)
-
-
-def value_to_truncated_bpm(value: int) -> Fraction:
-    """Only keeps enough significant digits to allow recovering the original
-    TEMPO line value from the bpm"""
-    precision = tempo_precision(value)
-    places = significant_decimal_places(precision) + 1
-    raw_bpm = value_to_bpm(value)
-    return truncate_fraction(raw_bpm, places)
-
-
-def value_to_bpm(value: int) -> Fraction:
-    return 6 * 10 ** 7 / Fraction(value)
-
-
-def significant_decimal_places(max_error: float) -> int:
-    return int(-(math.log(max_error / 5) / math.log(10)))
-
-
-def tempo_precision(value: int) -> float:
-    """Maximum error on the bpm this tempo value corresponds to"""
-    return (6 * 10 ** 7) / (value * (value + 1))
-
-
-def truncate_fraction(f: Fraction, places: int) -> Fraction:
-    """Truncates a fraction to the given number of decimal places"""
-    exponent = Fraction(10) ** places
-    return Fraction(math.floor(f * exponent), exponent)
 
 
 def make_tap_note(ticks: int, value: int, time_map: TimeMap) -> song.TapNote:

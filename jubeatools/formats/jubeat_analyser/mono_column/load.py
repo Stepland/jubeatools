@@ -4,7 +4,7 @@ from decimal import Decimal
 from functools import reduce
 from itertools import product
 from pathlib import Path
-from typing import Dict, Iterator, List, Set, Tuple, Union
+from typing import Any, Dict, Iterator, List, Set, Tuple, Union
 
 from parsimonious import Grammar, NodeVisitor, ParseError
 from parsimonious.nodes import Node
@@ -241,7 +241,7 @@ class MonoColumnParser(JubeatAnalyserParser):
             section_starting_beat += section.length
 
 
-def load_mono_column(path: Path) -> Song:
+def load_mono_column(path: Path, **kwargs: Any) -> Song:
     files = load_folder(path)
     charts = [_load_mono_column_file(lines) for _, lines in files.items()]
     return reduce(Song.merge, charts)

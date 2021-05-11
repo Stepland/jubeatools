@@ -19,7 +19,7 @@ from jubeatools.song import (
     TapNote,
     Timing,
 )
-from jubeatools.testutils.strategies import NoteOption, long_note
+from jubeatools.testutils.strategies import long_note
 from jubeatools.testutils.strategies import notes as notes_strat
 from jubeatools.testutils.strategies import tap_note
 from jubeatools.testutils.test_patterns import dump_and_load_then_compare
@@ -63,7 +63,7 @@ def test_that_a_single_long_note_roundtrips(note: LongNote) -> None:
     assert set([note]) == actual
 
 
-@given(notes_strat(NoteOption.LONGS))
+@given(notes_strat())
 def test_that_many_notes_roundtrip(notes: List[Union[TapNote, LongNote]]) -> None:
     timing = Timing(
         events=[BPMEvent(BeatsTime(0), Decimal(120))], beat_zero_offset=SecondsTime(0)

@@ -17,7 +17,7 @@ from ..test_utils import memo_compatible_song, temp_file_named_txt
 from . import example1, example2, example3
 
 
-@given(jbst.notes(jbst.NoteOption.LONGS))
+@given(jbst.notes())
 @example(example1.notes)
 def test_that_notes_roundtrip(notes: Set[Union[song.TapNote, song.LongNote]]) -> None:
     timing = song.Timing(

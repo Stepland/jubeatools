@@ -6,7 +6,7 @@ from decimal import Decimal
 from enum import Flag, auto
 from itertools import product
 from pathlib import Path
-from typing import Any, Dict, Optional, Set, Union
+from typing import Dict, Iterable, Optional, Set, Union
 
 import hypothesis.strategies as st
 from multidict import MultiDict
@@ -34,8 +34,9 @@ def beat_time(
     max_section: Optional[int] = None,
     min_numerator: Optional[int] = None,
     max_numerator: Optional[int] = None,
+    denominator_strat: st.SearchStrategy[int] = st.sampled_from([4, 8, 16, 3, 5]),
 ) -> BeatsTime:
-    denominator = draw(st.sampled_from([4, 8, 16, 3, 5]))
+    denominator = draw(denominator_strat)
 
     if min_section is not None:
         min_value = denominator * 4 * min_section
@@ -68,17 +69,25 @@ def note_position(draw: DrawFunc) -> NotePosition:
 
 
 @st.composite
-def tap_note(draw: DrawFunc) -> TapNote:
-    time = draw(beat_time(max_section=10))
+def tap_note(
+    draw: DrawFunc, time_start: st.SearchStrategy[BeatsTime] = beat_time(max_section=10)
+) -> TapNote:
+    time = draw(time_start)
     position = draw(note_position())
     return TapNote(time, position)
 
 
 @st.composite
-def long_note(draw: DrawFunc) -> LongNote:
-    time = draw(beat_time(max_section=10))
+def long_note(
+    draw: DrawFunc,
+    time_strat: st.SearchStrategy[BeatsTime] = beat_time(max_section=10),
+    duration_strat: st.SearchStrategy[BeatsTime] = beat_time(
+        min_numerator=1, max_section=3
+    ),
+) -> LongNote:
+    time = draw(time_strat)
     position = draw(note_position())
-    duration = draw(beat_time(min_numerator=1, max_section=3))
+    duration = draw(duration_strat)
     tail_is_vertical = draw(st.booleans())
     tail_offset = draw(st.integers(min_value=1, max_value=3))
     if tail_is_vertical:
@@ -91,15 +100,6 @@ def long_note(draw: DrawFunc) -> LongNote:
     return LongNote(time, position, duration, tail_tip)
 
 
-class NoteOption(Flag):
-    """What kind of notes are allowed to be generated"""
-
-    # Long notes
-    LONGS = auto()
-    # Intersections between longs and other notes on the same square
-    COLLISIONS = auto()
-
-
 @st.composite
 def bad_notes(draw: DrawFunc, longs: bool) -> Set[Union[TapNote, LongNote]]:
     note_strat = tap_note()
@@ -110,16 +110,20 @@ def bad_notes(draw: DrawFunc, longs: bool) -> Set[Union[TapNote, LongNote]]:
 
 
 @st.composite
-def notes(draw: DrawFunc, options: NoteOption) -> Set[Union[TapNote, LongNote]]:
-    if (NoteOption.COLLISIONS in options) and (NoteOption.LONGS not in options):
-        raise ValueError("Can't ask for collisions without longs")
-
-    note_strat = tap_note()
-    if NoteOption.LONGS in options:
-        note_strat = st.one_of(note_strat, long_note())
+def notes(
+    draw: DrawFunc,
+    collisions: bool = False,
+    note_strat: st.SearchStrategy[Union[TapNote, LongNote]] = st.one_of(
+        tap_note(), long_note()
+    ),
+    beat_time_strat: st.SearchStrategy[BeatsTime] = beat_time(max_section=3),
+    beat_interval_strat: st.SearchStrategy[BeatsTime] = beat_time(
+        min_numerator=1, max_section=3
+    ),
+) -> Set[Union[TapNote, LongNote]]:
     raw_notes: Set[Union[TapNote, LongNote]] = draw(st.sets(note_strat, max_size=32))
 
-    if NoteOption.COLLISIONS in options:
+    if collisions:
         return raw_notes
     else:
         last_notes: Dict[NotePosition, Optional[BeatsTime]] = {
@@ -129,11 +133,9 @@ def notes(draw: DrawFunc, options: NoteOption) -> Set[Union[TapNote, LongNote]]:
         for note in sorted(raw_notes, key=lambda n: (n.time, n.position)):
             last_note_time = last_notes[note.position]
             if last_note_time is None:
-                new_time = draw(beat_time(max_section=3))
+                new_time = draw(beat_time_strat)
             else:
-                new_time = last_note_time + draw(
-                    beat_time(min_numerator=1, max_section=3)
-                )
+                new_time = last_note_time + draw(beat_interval_strat)
             if isinstance(note, LongNote):
                 notes.add(
                     LongNote(
@@ -158,9 +160,11 @@ def bpms(draw: DrawFunc) -> Decimal:
 
 @st.composite
 def bpm_changes(
-    draw: DrawFunc, bpm_strat: st.SearchStrategy[Decimal] = bpms()
+    draw: DrawFunc,
+    bpm_strat: st.SearchStrategy[Decimal] = bpms(),
+    time_strat: st.SearchStrategy[BeatsTime] = beat_time(min_section=1, max_section=10),
 ) -> BPMEvent:
-    time = draw(beat_time(min_section=1, max_section=10))
+    time = draw(time_strat)
     bpm = draw(bpm_strat)
     return BPMEvent(time, bpm)
 
@@ -173,13 +177,14 @@ def timing_info(
     beat_zero_offset_strat: st.SearchStrategy[Decimal] = st.decimals(
         min_value=0, max_value=20, places=3
     ),
+    time_strat: st.SearchStrategy[BeatsTime] = beat_time(min_section=1, max_section=10),
 ) -> Timing:
     first_bpm = draw(bpm_strat)
     first_event = BPMEvent(BeatsTime(0), first_bpm)
     events = [first_event]
     if with_bpm_changes:
         raw_bpm_changes = st.lists(
-            bpm_changes(bpm_strat), unique_by=get_bpm_change_time
+            bpm_changes(bpm_strat, time_strat), unique_by=get_bpm_change_time
         )
         sorted_bpm_changes = raw_bpm_changes.map(
             lambda l: sorted(l, key=get_bpm_change_time)
@@ -195,15 +200,23 @@ def get_bpm_change_time(b: BPMEvent) -> BeatsTime:
 
 
 @st.composite
-def chart(draw: DrawFunc, timing_strat: Any, notes_strat: Any) -> Chart:
-    level = Decimal(
-        draw(
-            st.one_of(
-                st.integers(min_value=0),
-                st.decimals(min_value=0, max_value=10.9, places=1),
-            )
+def level(draw: DrawFunc) -> Union[int, Decimal]:
+    d: Union[int, Decimal] = draw(
+        st.one_of(
+            st.integers(min_value=0), st.decimals(min_value=0, max_value=10.9, places=1)
         )
     )
+    return d
+
+
+@st.composite
+def chart(
+    draw: DrawFunc,
+    timing_strat: st.SearchStrategy[Timing] = timing_info(),
+    notes_strat: st.SearchStrategy[Iterable[Union[TapNote, LongNote]]] = notes(),
+    level_strat: st.SearchStrategy[Union[int, Decimal]] = level(),
+) -> Chart:
+    level = Decimal(draw(level_strat))
     timing = draw(timing_strat)
     notes = draw(notes_strat)
     return Chart(
@@ -228,15 +241,15 @@ def preview(draw: DrawFunc) -> Preview:
 def metadata(
     draw: DrawFunc,
     text_strat: st.SearchStrategy[str] = st.text(),
-    path_start: st.SearchStrategy[str] = st.text(),
+    path_strat: st.SearchStrategy[str] = st.text(),
 ) -> Metadata:
     return Metadata(
         title=draw(text_strat),
         artist=draw(text_strat),
-        audio=Path(draw(path_start)),
-        cover=Path(draw(path_start)),
+        audio=Path(draw(path_strat)),
+        cover=Path(draw(path_strat)),
         preview=draw(st.one_of(st.none(), preview())),
-        preview_file=draw(path_start),
+        preview_file=draw(path_strat),
     )
 
 
@@ -249,44 +262,20 @@ class TimingOption(Flag):
 @st.composite
 def song(
     draw: DrawFunc,
-    timing_options: TimingOption,
-    extra_diffs: bool,
-    notes_options: NoteOption,
+    diffs_strat: st.SearchStrategy[Set[str]] = st.sets(
+        st.sampled_from(list(d.value for d in Difficulty)), min_size=1, max_size=3
+    ),
+    common_timing_strat: st.SearchStrategy[Optional[Timing]] = timing_info(),
+    chart_strat: st.SearchStrategy[Chart] = chart(),
+    metadata_strat: st.SearchStrategy[Metadata] = metadata(),
 ) -> Song:
-    if not ((TimingOption.GLOBAL | TimingOption.PER_CHART) & timing_options):
-        raise ValueError(
-            "Invalid timing options, at least one of the flags GLOBAL or PER_CHART must be set"
-        )
-
-    timing_strat = timing_info(TimingOption.BPM_CHANGES in timing_options)
-    note_strat = notes(notes_options)
-    diff_name_strat = st.sampled_from(list(d.value for d in Difficulty))
-    if extra_diffs:
-        # only go for ascii in extra diffs
-        # https://en.wikipedia.org/wiki/Basic_Latin_(Unicode_block)
-        diff_name_strat = st.one_of(
-            diff_name_strat,
-            st.text(
-                alphabet=st.characters(min_codepoint=0x20, max_codepoint=0x7E),
-                min_size=1,
-                max_size=20,
-            ),
-        )
-    diffs = draw(st.sets(diff_name_strat, min_size=1, max_size=10))
+    diffs = draw(diffs_strat)
     charts: MultiDict[Chart] = MultiDict()
     for diff_name in diffs:
-        chart_timing_strat = st.none()
-        if TimingOption.PER_CHART in timing_options:
-            chart_timing_strat = st.one_of(st.none(), timing_strat)
-        _chart = draw(chart(chart_timing_strat, note_strat))
-        charts.add(diff_name, _chart)
-
-    common_timing_start: st.SearchStrategy[Optional[Timing]] = st.none()
-    if TimingOption.GLOBAL in timing_options:
-        common_timing_start = timing_strat
+        charts.add(diff_name, draw(chart_strat))
 
     return Song(
-        metadata=draw(metadata()),
+        metadata=draw(metadata_strat),
         charts=charts,
-        common_timing=draw(common_timing_start),
+        common_timing=draw(common_timing_strat),
     )

@@ -9,7 +9,6 @@ from jubeatools import song
 from jubeatools.formats import Format
 from jubeatools.formats.jubeat_analyser.memo1.dump import _dump_memo1_chart
 from jubeatools.formats.jubeat_analyser.memo1.load import Memo1Parser
-from jubeatools.testutils.strategies import NoteOption
 from jubeatools.testutils.strategies import notes as notes_strat
 from jubeatools.testutils.test_patterns import dump_and_load_then_compare
 
@@ -17,7 +16,7 @@ from ..test_utils import memo_compatible_song, temp_file_named_txt
 from . import example1
 
 
-@given(notes_strat(NoteOption.LONGS))
+@given(notes_strat())
 def test_that_notes_roundtrip(notes: List[Union[song.TapNote, song.LongNote]]) -> None:
     timing = song.Timing(
         events=[song.BPMEvent(song.BeatsTime(0), Decimal(120))],

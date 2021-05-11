@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Protocol
+from typing import Any, Dict, List, Protocol
 
 from jubeatools.formats.filetypes import ChartFile
 from jubeatools.song import Song
@@ -24,6 +24,10 @@ class ChartFileDumper(Protocol):
         ...
 
 
-# Loaders deserialize a Path to a Song object
-# The Path can be a file or a folder depending on the format
-Loader = Callable[[Path], Song]
+class Loader(Protocol):
+    """A Loader deserializes a Path to a Song object and possibly takes in
+    some options via the kwargs.
+    The Path can be a file or a folder depending on the format"""
+
+    def __call__(self, path: Path, **kwargs: Any) -> Song:
+        ...

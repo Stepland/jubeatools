@@ -97,7 +97,7 @@ def looks_like_eve(path: Path) -> bool:
         line = f.readline()
         if line.strip():
             return looks_like_eve_line(next(f))
-    
+
     return False
 
 

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import math
 from dataclasses import astuple, dataclass
 from enum import Enum
 from fractions import Fraction
-from typing import Union
+from itertools import count
+from typing import Iterator, Union
 
 from jubeatools import song
 
@@ -64,15 +66,7 @@ class Event:
 
     @classmethod
     def from_long_note(cls, note: song.LongNote, time_map: TimeMap) -> Event:
-        if not note.has_straight_tail():
-            raise ValueError("Diagonal tails cannot be represented in eve format")
-
-        eve_long = EveLong(
-            duration=duration_in_ticks(note, time_map),
-            length=len(list(note.positions_covered())) - 1,
-            direction=DIRECTION_TO_VALUE[note.tail_direction()],
-            position=note.position.index,
-        )
+        eve_long = EveLong.from_jubeatools(note, time_map)
         ticks = ticks_at_beat(note.time, time_map)
         return Event(time=ticks, command=Command.LONG, value=eve_long.value)
 
@@ -135,6 +129,18 @@ class EveLong:
             )
 
     @classmethod
+    def from_jubeatools(cls, note: song.LongNote, time_map: TimeMap) -> EveLong:
+        if not note.has_straight_tail():
+            raise ValueError("Diagonal tails cannot be represented in eve format")
+
+        return cls(
+            duration=duration_in_ticks(note, time_map),
+            length=len(list(note.positions_covered())) - 1,
+            direction=DIRECTION_TO_VALUE[note.tail_direction()],
+            position=note.position.index,
+        )
+
+    @classmethod
     def from_value(cls, value: int) -> EveLong:
         if value < 0:
             raise ValueError("Value cannot be negative")
@@ -148,7 +154,10 @@ class EveLong:
     @property
     def value(self) -> int:
         return (
-            self.duration << 8 + self.length << 6 + self.direction << 4 + self.position
+            (self.duration << 8)
+            + (self.length << 6)
+            + (self.direction << 4)
+            + self.position
         )
 
 
@@ -172,3 +181,33 @@ def ticks_to_seconds(tick: int) -> Fraction:
 def seconds_to_ticks(time: Fraction) -> int:
     """Convert fractional seconds to eve ticks (300 Hz)"""
     return round(time * 300)
+
+
+def value_to_truncated_bpm(value: int) -> Fraction:
+    """Only keeps enough significant digits to allow recovering the original
+    TEMPO line value from the bpm"""
+    exact_bpm = value_to_bpm(value)
+    truncated_bpms = iter_truncated(exact_bpm)
+    bpms_preserving_value = filter(
+        lambda b: bpm_to_value(b) < value + 1, truncated_bpms
+    )
+    return next(bpms_preserving_value)
+
+
+def iter_truncated(f: Fraction) -> Iterator[Fraction]:
+    for places in count():
+        yield truncate_fraction(f, places)
+
+
+def truncate_fraction(f: Fraction, places: int) -> Fraction:
+    """Truncates a fraction to the given number of decimal places"""
+    exponent = Fraction(10) ** places
+    return Fraction(math.floor(f * exponent), exponent)
+
+
+def value_to_bpm(value: int) -> Fraction:
+    return 6 * 10 ** 7 / Fraction(value)
+
+
+def bpm_to_value(bpm: Fraction) -> Fraction:
+    return 6 * 10 ** 7 / bpm

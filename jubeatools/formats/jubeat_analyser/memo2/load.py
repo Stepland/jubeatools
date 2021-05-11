@@ -3,7 +3,7 @@ from decimal import Decimal
 from functools import reduce
 from itertools import product, zip_longest
 from pathlib import Path
-from typing import Dict, Iterator, List, Mapping, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple, Union
 
 from parsimonious import Grammar, NodeVisitor, ParseError
 from parsimonious.nodes import Node
@@ -457,7 +457,7 @@ def _load_memo2_file(lines: List[str]) -> Song:
     return Song(metadata=metadata, charts=charts)
 
 
-def load_memo2(path: Path) -> Song:
+def load_memo2(path: Path, **kwargs: Any) -> Song:
     files = load_folder(path)
     charts = [_load_memo2_file(lines) for _, lines in files.items()]
     return reduce(Song.merge, charts)

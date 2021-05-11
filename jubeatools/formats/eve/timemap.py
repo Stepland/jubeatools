@@ -81,8 +81,8 @@ class TimeMap:
             raise ValueError("No BPM defined")
 
         grouped_by_time = group_by(events, key=lambda e: e.seconds)
-        for time, events in grouped_by_time.items():
-            if len(events) > 1:
+        for time, events_at_time in grouped_by_time.items():
+            if len(events_at_time) > 1:
                 raise ValueError(f"Multiple BPMs defined at {time} seconds : {events}")
 
         # take the first BPM change then compute from there
@@ -144,10 +144,13 @@ class TimeMap:
         )
         return bpm_change.beats + beats_since_last_event
 
-    def convert_to_timing_info(self) -> song.Timing:
+    def convert_to_timing_info(self, beat_snap: int = 240) -> song.Timing:
         return song.Timing(
             events=[
-                song.BPMEvent(time=round_beats(e.beats), BPM=fraction_to_decimal(e.BPM))
+                song.BPMEvent(
+                    time=round_beats(e.beats, beat_snap),
+                    BPM=fraction_to_decimal(e.BPM),
+                )
                 for e in self.events_by_beats
             ],
             beat_zero_offset=self.beat_zero_offset,

@@ -14,7 +14,7 @@ from jubeatools.testutils.typing import DrawFunc
 def memo_compatible_metadata(draw: DrawFunc) -> song.Metadata:
     text_strat = st.text(alphabet=st.characters(min_codepoint=0x20, max_codepoint=0x7E))
     metadata: song.Metadata = draw(
-        jbst.metadata(text_strat=text_strat, path_start=text_strat)
+        jbst.metadata(text_strat=text_strat, path_strat=text_strat)
     )
     metadata.preview = None
     metadata.preview_file = None
@@ -28,7 +28,7 @@ def memo_compatible_song(draw: DrawFunc) -> song.Song:
     chart = draw(
         jbst.chart(
             timing_strat=jbst.timing_info(with_bpm_changes=True),
-            notes_strat=jbst.notes(jbst.NoteOption.LONGS),
+            notes_strat=jbst.notes(),
         )
     )
     metadata: song.Metadata = draw(memo_compatible_metadata())

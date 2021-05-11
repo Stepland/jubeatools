@@ -1,5 +1,6 @@
 import tempfile
 from contextlib import contextmanager
+from decimal import Decimal
 from pathlib import Path
 from typing import Iterator
 
@@ -12,6 +13,10 @@ from jubeatools.testutils import strategies as jbst
 from jubeatools.testutils.test_patterns import dump_and_load_then_compare
 from jubeatools.testutils.typing import DrawFunc
 
+simple_beat_strat = jbst.beat_time(
+    denominator_strat=st.sampled_from([4, 8, 3]), max_section=10
+)
+
 
 @st.composite
 def eve_compatible_song(draw: DrawFunc) -> song.Song:
@@ -21,10 +26,24 @@ def eve_compatible_song(draw: DrawFunc) -> song.Song:
         jbst.chart(
             timing_strat=jbst.timing_info(
                 with_bpm_changes=True,
-                bpm_strat=st.decimals(min_value=1, max_value=1000, places=2),
+                bpm_strat=st.decimals(min_value=1, max_value=500, places=2),
                 beat_zero_offset_strat=st.decimals(min_value=0, max_value=20, places=2),
+                time_strat=simple_beat_strat,
             ),
-            notes_strat=jbst.notes(jbst.NoteOption.LONGS),
+            notes_strat=jbst.notes(
+                note_strat=st.one_of(
+                    jbst.tap_note(time_start=simple_beat_strat),
+                    jbst.long_note(
+                        time_strat=simple_beat_strat,
+                        duration_strat=jbst.beat_time(
+                            min_numerator=1,
+                            max_section=3,
+                            denominator_strat=st.sampled_from([4, 8, 3]),
+                        ),
+                    ),
+                )
+            ),
+            level_strat=st.just(Decimal(0)),
         )
     )
     return song.Song(
@@ -40,7 +59,7 @@ def open_temp_dir() -> Iterator[Path]:
 
 
 @given(eve_compatible_song())
-@settings(verbosity=Verbosity.debug)
+@settings(verbosity=Verbosity.normal)
 def test_that_full_chart_roundtrips(song: song.Song) -> None:
     dump_and_load_then_compare(
         Format.EVE,

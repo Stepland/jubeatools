@@ -12,7 +12,7 @@ from jubeatools import song
 from jubeatools.formats.dump_tools import make_dumper_from_chart_file_dumper
 from jubeatools.formats.filetypes import ChartFile
 
-from .commons import AnyNote, Command, Event, ticks_at_beat
+from .commons import AnyNote, Command, Event, bpm_to_value, ticks_at_beat
 from .timemap import TimeMap
 
 
@@ -71,12 +71,8 @@ def make_timing_events(
 
 def make_bpm_event(bpm_change: song.BPMEvent, time_map: TimeMap) -> Event:
     ticks = ticks_at_beat(bpm_change.time, time_map)
-    bpm_value = bpm_to_value(Fraction(bpm_change.BPM))
+    bpm_value = math.floor(bpm_to_value(Fraction(bpm_change.BPM)))
     return Event(time=ticks, command=Command.TEMPO, value=bpm_value)
-
-
-def bpm_to_value(bpm: Fraction) -> int:
-    return math.floor(60 * 10 ** 6 / bpm)
 
 
 def choose_end_beat(notes: List[AnyNote]) -> song.BeatsTime:
