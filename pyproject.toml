@@ -30,7 +30,7 @@ flake8 = "^3.9.1"
 autoimport = "^0.7.0"
 
 [tool.poetry.scripts]
-jubeatools = 'jubeatools.cli:convert'
+jubeatools = 'jubeatools.cli.cli:convert'
 
 [tool.isort]
 multi_line_output = 3

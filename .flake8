@@ -17,7 +17,12 @@ ignore =
     E731
 exclude =
     .git
+    .hypothesis
+    .mypy_cache
+    .pytest_cache
+    .vscode
     __pycache__
+    docs
     dist
     build
 per-file-ignores =

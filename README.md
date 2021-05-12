@@ -14,17 +14,13 @@ jubeatools ${source} ${destination} -f ${output format} (... format specific opt
 ```
 
 ## Which formats are supported
-### Memon
-|        | input | output |
-|--------|:-----:|:------:|
-| v0.2.0 | ✔️     | ✔️      |
-| v0.1.0 | ✔️     | ✔️      |
-| legacy | ✔️     | ✔️      |
-
-### Jubeat Analyser
-|                      | input | output |
-|----------------------|:-----:|:------:|
-| #memo2               | ✔️     | ✔️      |
-| #memo1               | ✔️     | ✔️      |
-| #memo                | ✔️     | ✔️      |
-| mono-column (1列形式) | ✔️     | ✔️      |
+|                 |                      | input | output |
+|-----------------|----------------------|:-----:|:------:|
+| memon           | v0.2.0               | ✔️     | ✔️      |
+| .               | v0.1.0               | ✔️     | ✔️      |
+| .               | legacy               | ✔️     | ✔️      |
+| jubeat analyser | #memo2               | ✔️     | ✔️      |
+| .               | #memo1               | ✔️     | ✔️      |
+| .               | #memo                | ✔️     | ✔️      |
+| .               | mono-column (1列形式) | ✔️     | ✔️      |
+| jubeat (arcade) | .eve                 | ✔️     | ✔️      |

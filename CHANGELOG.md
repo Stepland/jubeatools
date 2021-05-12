@@ -1,6 +1,9 @@
-# Unreleased
+# 1.0.0
 ## Added
-- [eve] 🎉 .eve support !
+- [eve]
+    - 🎉 .eve support !
+    - Add `--beat-snap={number}` loader option to allow aggressive rounding
+- Loaders can now take in arguments
 ## Fixed
 - Fix infinite loop that would occur when choosing a deduplicated filename
 - [jubeat-analyser] Prettier rendering of decimal values
