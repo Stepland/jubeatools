@@ -54,7 +54,6 @@ def convert(
     dumper_options: Dict[str, Any],
 ) -> None:
     """Convert SRC to DST using the format specified by -f"""
-    print(locals())
     if input_format is None:
         input_format = guess_format(Path(src))
         click.echo(f"Detected input file format : {input_format}")

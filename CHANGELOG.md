@@ -1,3 +1,7 @@
+# 1.0.1
+## Fixed
+- Remove debug `print(locals())` mistakenly left in
+
 # 1.0.0
 ## Added
 - [eve]
