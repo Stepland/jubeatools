@@ -43,11 +43,11 @@ def _load_eve(lines: List[str], file_path: Path, *, beat_snap: int = 240) -> son
     ]
     time_map = TimeMap.from_seconds(bpms)
     tap_notes: List[AnyNote] = [
-        make_tap_note(e.time, e.value, time_map)
+        make_tap_note(e.time, e.value, time_map, beat_snap)
         for e in events_by_command[Command.PLAY]
     ]
     long_notes: List[AnyNote] = [
-        make_long_notes(e.time, e.value, time_map)
+        make_long_note(e.time, e.value, time_map, beat_snap)
         for e in events_by_command[Command.LONG]
     ]
     all_notes = sorted(tap_notes + long_notes, key=lambda n: (n.time, n.position))
@@ -102,22 +102,26 @@ def parse_event(line: str) -> Event:
     return Event(tick, command, value)
 
 
-def make_tap_note(ticks: int, value: int, time_map: TimeMap) -> song.TapNote:
+def make_tap_note(
+    ticks: int, value: int, time_map: TimeMap, beat_snap: int
+) -> song.TapNote:
     seconds = ticks_to_seconds(ticks)
     raw_beats = time_map.beats_at(seconds)
-    beats = round_beats(raw_beats)
+    beats = round_beats(raw_beats, beat_snap)
     position = song.NotePosition.from_index(value)
     return song.TapNote(time=beats, position=position)
 
 
-def make_long_notes(ticks: int, value: int, time_map: TimeMap) -> song.LongNote:
+def make_long_note(
+    ticks: int, value: int, time_map: TimeMap, beat_snap: int
+) -> song.LongNote:
     seconds = ticks_to_seconds(ticks)
     raw_beats = time_map.beats_at(seconds)
-    beats = round_beats(raw_beats)
+    beats = round_beats(raw_beats, beat_snap)
     eve_long = EveLong.from_value(value)
     seconds_duration = ticks_to_seconds(eve_long.duration)
     raw_beats_duration = time_map.beats_at(seconds + seconds_duration) - raw_beats
-    beats_duration = round_beats(raw_beats_duration)
+    beats_duration = round_beats(raw_beats_duration, beat_snap)
     position = song.NotePosition.from_index(eve_long.position)
     direction = VALUE_TO_DIRECTION[eve_long.direction]
     step_vector = song.TAIL_DIRECTION_TO_OUTWARDS_VECTOR[direction]

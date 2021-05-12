@@ -4,7 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterator
 
-from hypothesis import Verbosity, given, settings
+from hypothesis import given
 from hypothesis import strategies as st
 
 from jubeatools import song
@@ -20,19 +20,24 @@ simple_beat_strat = jbst.beat_time(
 
 @st.composite
 def eve_compatible_song(draw: DrawFunc) -> song.Song:
-    """eve only keeps notes, timing info and difficulty"""
+    """eve only keeps notes, timing info and difficulty,
+    the precision you can get out of it is also severly limited"""
     diff = draw(st.sampled_from(list(song.Difficulty)))
     chart = draw(
         jbst.chart(
             timing_strat=jbst.timing_info(
                 with_bpm_changes=True,
-                bpm_strat=st.decimals(min_value=1, max_value=500, places=2),
+                bpm_strat=st.decimals(min_value=50, max_value=300, places=2),
                 beat_zero_offset_strat=st.decimals(min_value=0, max_value=20, places=2),
-                time_strat=simple_beat_strat,
+                time_strat=jbst.beat_time(
+                    min_section=1,
+                    max_section=10,
+                    denominator_strat=st.sampled_from([4, 8, 3]),
+                ),
             ),
             notes_strat=jbst.notes(
                 note_strat=st.one_of(
-                    jbst.tap_note(time_start=simple_beat_strat),
+                    jbst.tap_note(time_strat=simple_beat_strat),
                     jbst.long_note(
                         time_strat=simple_beat_strat,
                         duration_strat=jbst.beat_time(
@@ -41,7 +46,8 @@ def eve_compatible_song(draw: DrawFunc) -> song.Song:
                             denominator_strat=st.sampled_from([4, 8, 3]),
                         ),
                     ),
-                )
+                ),
+                beat_time_strat=simple_beat_strat,
             ),
             level_strat=st.just(Decimal(0)),
         )
@@ -59,11 +65,11 @@ def open_temp_dir() -> Iterator[Path]:
 
 
 @given(eve_compatible_song())
-@settings(verbosity=Verbosity.normal)
 def test_that_full_chart_roundtrips(song: song.Song) -> None:
     dump_and_load_then_compare(
         Format.EVE,
         song,
         temp_path=open_temp_dir(),
         bytes_decoder=lambda b: b.decode("ascii"),
+        load_options={"beat_snap": 24},
     )

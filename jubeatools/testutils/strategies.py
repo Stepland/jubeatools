@@ -70,9 +70,9 @@ def note_position(draw: DrawFunc) -> NotePosition:
 
 @st.composite
 def tap_note(
-    draw: DrawFunc, time_start: st.SearchStrategy[BeatsTime] = beat_time(max_section=10)
+    draw: DrawFunc, time_strat: st.SearchStrategy[BeatsTime] = beat_time(max_section=10)
 ) -> TapNote:
-    time = draw(time_start)
+    time = draw(time_strat)
     position = draw(note_position())
     return TapNote(time, position)
 
@@ -117,9 +117,6 @@ def notes(
         tap_note(), long_note()
     ),
     beat_time_strat: st.SearchStrategy[BeatsTime] = beat_time(max_section=3),
-    beat_interval_strat: st.SearchStrategy[BeatsTime] = beat_time(
-        min_numerator=1, max_section=3
-    ),
 ) -> Set[Union[TapNote, LongNote]]:
     raw_notes: Set[Union[TapNote, LongNote]] = draw(st.sets(note_strat, max_size=32))
 
@@ -135,7 +132,11 @@ def notes(
             if last_note_time is None:
                 new_time = draw(beat_time_strat)
             else:
-                new_time = last_note_time + draw(beat_interval_strat)
+                numerator = draw(
+                    st.integers(min_value=1, max_value=last_note_time.denominator * 4)
+                )
+                distance = BeatsTime(numerator, last_note_time.denominator)
+                new_time = last_note_time + distance
             if isinstance(note, LongNote):
                 notes.add(
                     LongNote(
