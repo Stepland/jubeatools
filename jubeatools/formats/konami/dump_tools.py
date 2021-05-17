@@ -1,42 +1,21 @@
-from __future__ import annotations
-
 import math
 from fractions import Fraction
 from functools import singledispatch
-from pathlib import Path
 from typing import List
 
 from more_itertools import numeric_range
 
 from jubeatools import song
-from jubeatools.formats.dump_tools import make_dumper_from_chart_file_dumper
-from jubeatools.formats.filetypes import ChartFile
 
 from .commons import AnyNote, Command, Event, bpm_to_value, ticks_at_beat
 from .timemap import TimeMap
 
 
-def _dump_eve(song: song.Song, **kwargs: dict) -> List[ChartFile]:
-    res = []
-    for dif, chart, timing in song.iter_charts_with_timing():
-        chart_text = dump_chart(chart.notes, timing)
-        chart_bytes = chart_text.encode("ascii")
-        res.append(ChartFile(chart_bytes, song, dif, chart))
-
-    return res
-
-
-dump_eve = make_dumper_from_chart_file_dumper(
-    internal_dumper=_dump_eve, file_name_template=Path("{difficulty:l}.eve")
-)
-
-
-def dump_chart(notes: List[AnyNote], timing: song.Timing) -> str:
+def make_events_from_chart(notes: List[AnyNote], timing: song.Timing) -> List[Event]:
     time_map = TimeMap.from_timing(timing)
     note_events = make_note_events(notes, time_map)
     timing_events = make_timing_events(notes, timing, time_map)
-    sorted_events = sorted(note_events + timing_events)
-    return "\n".join(e.dump() for e in sorted_events)
+    return sorted(note_events + timing_events)
 
 
 def make_note_events(notes: List[AnyNote], time_map: TimeMap) -> List[Event]:

@@ -6,7 +6,7 @@ from decimal import Decimal
 from fractions import Fraction
 from functools import reduce
 from math import gcd
-from typing import Callable, Dict, Hashable, List, Optional, TypeVar
+from typing import Callable, Dict, Hashable, Iterable, List, Optional, TypeVar
 
 
 def single_lcm(a: int, b: int) -> int:
@@ -44,7 +44,7 @@ K = TypeVar("K", bound=Hashable)
 V = TypeVar("V")
 
 
-def group_by(elements: List[V], key: Callable[[V], K]) -> Dict[K, List[V]]:
+def group_by(elements: Iterable[V], key: Callable[[V], K]) -> Dict[K, List[V]]:
     res = defaultdict(list)
     for e in elements:
         res[key(e)].append(e)

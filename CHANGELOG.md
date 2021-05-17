@@ -1,3 +1,7 @@
+# Unreleased
+## Added
+- [jbsq] 🎉 initial .jbsq support !
+
 # 1.0.1
 ## Fixed
 - Remove debug `print(locals())` mistakenly left in

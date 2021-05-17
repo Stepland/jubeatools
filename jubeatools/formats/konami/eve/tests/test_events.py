@@ -2,10 +2,9 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from jubeatools import song
+from jubeatools.formats.konami.commons import EveLong
+from jubeatools.formats.konami.timemap import TimeMap
 from jubeatools.testutils import strategies as jbst
-
-from ..commons import EveLong
-from ..timemap import TimeMap
 
 
 @given(

@@ -13,6 +13,7 @@ from .timemap import TimeMap
 
 AnyNote = Union[song.TapNote, song.LongNote]
 
+
 DIRECTION_TO_VALUE = {
     song.Direction.DOWN: 0,
     song.Direction.UP: 1,
@@ -34,7 +35,7 @@ class Command(int, Enum):
 
 @dataclass(order=True)
 class Event:
-    """Represents a line in an .eve file"""
+    """Represents a line in an .eve file or an event struct in a .jbsq file"""
 
     time: int
     command: Command

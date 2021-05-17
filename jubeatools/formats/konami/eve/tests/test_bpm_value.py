@@ -3,7 +3,7 @@ import math
 from hypothesis import given
 from hypothesis import strategies as st
 
-from ..commons import bpm_to_value, value_to_truncated_bpm
+from jubeatools.formats.konami.commons import bpm_to_value, value_to_truncated_bpm
 
 
 @given(st.integers(min_value=1, max_value=6 * 10 ** 7))
