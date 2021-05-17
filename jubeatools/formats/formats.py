@@ -1,7 +1,6 @@
 from typing import Dict
 
 from .enum import Format
-from .eve import dump_eve, load_eve
 from .jubeat_analyser import (
     dump_memo,
     dump_memo1,
@@ -12,6 +11,7 @@ from .jubeat_analyser import (
     load_memo2,
     load_mono_column,
 )
+from .konami import dump_eve, dump_jbsq, load_eve, load_jbsq
 from .memon import (
     dump_memon_0_1_0,
     dump_memon_0_2_0,
@@ -24,6 +24,7 @@ from .typing import Dumper, Loader
 
 LOADERS: Dict[Format, Loader] = {
     Format.EVE: load_eve,
+    Format.JBSQ: load_jbsq,
     Format.MEMON_LEGACY: load_memon_legacy,
     Format.MEMON_0_1_0: load_memon_0_1_0,
     Format.MEMON_0_2_0: load_memon_0_2_0,
@@ -35,6 +36,7 @@ LOADERS: Dict[Format, Loader] = {
 
 DUMPERS: Dict[Format, Dumper] = {
     Format.EVE: dump_eve,
+    Format.JBSQ: dump_jbsq,
     Format.MEMON_LEGACY: dump_memon_legacy,
     Format.MEMON_0_1_0: dump_memon_0_1_0,
     Format.MEMON_0_2_0: dump_memon_0_2_0,

@@ -22,6 +22,9 @@ def guess_format(path: Path) -> Format:
     if looks_like_eve(path):
         return Format.EVE
 
+    if looks_like_jbsq(path):
+        return Format.JBSQ
+
     raise ValueError("Unrecognized file format")
 
 
@@ -94,7 +97,11 @@ def recognize_jubeat_analyser_format(path: Path) -> Format:
 
 def looks_like_eve(path: Path) -> bool:
     with path.open(encoding="ascii") as f:
-        line = f.readline()
+        try:
+            line = f.readline()
+        except UnicodeDecodeError:
+            return False
+
         if line.strip():
             return looks_like_eve_line(next(f))
 
@@ -131,3 +138,8 @@ def looks_like_eve_line(line: str) -> bool:
         return False
 
     return True
+
+
+def looks_like_jbsq(path: Path) -> bool:
+    magic = path.open(mode="rb").read(4)
+    return magic in (b"IJBQ", b"IJSQ", b"JBSQ")

@@ -4,13 +4,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterator
 
-from hypothesis import given
 from hypothesis import strategies as st
 
 from jubeatools import song
-from jubeatools.formats import Format
 from jubeatools.testutils import strategies as jbst
-from jubeatools.testutils.test_patterns import dump_and_load_then_compare
 from jubeatools.testutils.typing import DrawFunc
 
 simple_beat_strat = jbst.beat_time(
@@ -62,14 +59,3 @@ def eve_compatible_song(draw: DrawFunc) -> song.Song:
 def open_temp_dir() -> Iterator[Path]:
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
-
-
-@given(eve_compatible_song())
-def test_that_full_chart_roundtrips(song: song.Song) -> None:
-    dump_and_load_then_compare(
-        Format.EVE,
-        song,
-        temp_path=open_temp_dir(),
-        bytes_decoder=lambda b: b.decode("ascii"),
-        load_options={"beat_snap": 24},
-    )
