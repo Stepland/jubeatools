@@ -1,12 +1,16 @@
-# 1.1.0
+# v1.1.1
+## Fixed
+- `construct-typing` is now required for all builds
+
+# v1.1.0
 ## Added
 - [jbsq] 🎉 initial .jbsq support !
 
-# 1.0.1
+# v1.0.1
 ## Fixed
 - Remove debug `print(locals())` mistakenly left in
 
-# 1.0.0
+# v1.0.0
 ## Added
 - [eve]
     - 🎉 .eve support !

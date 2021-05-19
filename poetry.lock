@@ -105,7 +105,7 @@ extras = ["arrow", "cloudpickle", "enum34", "lz4", "numpy", "ruamel.yaml"]
 name = "construct-typing"
 version = "0.4.2"
 description = "Extension for the python package 'construct' that adds typing features"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -441,7 +441,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "8831aec0d2e864364d6b1681b19f918072cb4acf2fc35fdac8934d107335ce0a"
+content-hash = "dd2989bf15b7c389b4d6d8f28335f4fea3cb064b41723e5fe500f38dd92c39bb"
 
 [metadata.files]
 appdirs = [
