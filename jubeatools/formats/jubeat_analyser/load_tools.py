@@ -83,7 +83,7 @@ double_column_chart_line_grammar = Grammar(
     line            = ws position_part ws (timing_part ws)? comment?
     position_part   = ~r"[^*#:|/\s]{4,8}"
     timing_part     = "|" ~r"[^*#:|/\s]*" "|"
-    ws              = ~r"[\t ]*"
+    ws              = ~r"[\t \u3000]*"
     comment         = ~r"//.*"
 """
 )

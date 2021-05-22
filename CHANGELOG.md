@@ -1,3 +1,12 @@
+# Unreleased
+## Fixed
+- [jubeat-analyser]
+    - Accept U+3000 (Ideographic space) as valid whitespace everywhere
+    - [memo2]
+        - Accept `t=` commands anywhere in the file
+        - Accept `b=4` (and only 4) anywhere in the file
+
+
 # v1.1.1
 ## Fixed
 - `construct-typing` is now required for all builds

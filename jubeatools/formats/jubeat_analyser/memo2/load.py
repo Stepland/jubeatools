@@ -102,7 +102,7 @@ memo2_chart_line_grammar = Grammar(
     bpm             = "(" float ")"
     float           = ~r"\d+(\.\d+)?"
     notes           = ~r"[^*#:\(\[|/\s]+"
-    ws              = ~r"[\t ]*"
+    ws              = ~r"[\t \u3000]*" # U+03000 : IDEOGRAPHIC SPACE
     comment         = ~r"//.*"
 """
 )
@@ -180,20 +180,16 @@ class Memo2Parser(JubeatAnalyserParser):
         self.frames: List[Memo2Frame] = []
 
     def do_b(self, value: str) -> None:
-        raise RuntimeError(
-            "beat command (b=...) found, this commands cannot be used in #memo2 files"
-        )
+        if Decimal(value) != 4:
+            raise RuntimeError(
+                "Beat command (b=...) found with a value other that 4, this is "
+                "unexpected in #memo2 files. If you are sure the file is not "
+                "just actually a #memo1 or #memo file with the wrong format "
+                "tag, you're welcome to report this error as a bug"
+            )
 
     def do_t(self, value: str) -> None:
-        if self.frames:
-            raise RuntimeError(
-                "tempo command (t=...) found outside of the file header, "
-                "this should not happen in #memo2 files"
-            )
-        else:
-            self.timing_events.append(
-                BPMEvent(self._current_beat(), BPM=Decimal(value))
-            )
+        self.timing_events.append(BPMEvent(self._current_beat(), BPM=Decimal(value)))
 
     def do_r(self, value: str) -> None:
         if self.frames:
