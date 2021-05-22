@@ -18,6 +18,7 @@ def test_RorataJins_example() -> None:
             loader = LOADERS[format_]
             _ = loader(p)
 
+
 def test_Booths_of_Fighters_memo() -> None:
     """This file has 2 quirks my code did not anticipate :
     - while it's in #memo2 format, it actually uses b= and t= commands
