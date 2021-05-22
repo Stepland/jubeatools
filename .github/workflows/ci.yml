@@ -20,7 +20,7 @@ jobs:
       - name: Code style
         run: |
           poetry run isort --check-only
-          poetry run black --check
+          poetry run black --check jubeatools
       - name: Lint code
         run: poetry run sh ./utils/check_code.sh
       - name: Unit tests

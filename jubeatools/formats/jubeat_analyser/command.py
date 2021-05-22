@@ -48,7 +48,7 @@ command_grammar = Grammar(
     value_in_quotes = '"' quoted_value '"'
     quoted_value    = ~r"([^\"\\]|\\\"|\\\\)*"
     number          = ~r"-?\d+(\.\d+)?"
-    ws              = ~r"[\t ]*"
+    ws              = ~r"[\t \u3000]*"
     comment         = ~r"//.*"
     """
 )

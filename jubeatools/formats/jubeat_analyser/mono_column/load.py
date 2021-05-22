@@ -42,7 +42,7 @@ mono_column_chart_line_grammar = Grammar(
     r"""
     line            = ws chart_line ws comment?
     chart_line      = ~r"[^*#:|\-/\s]{4,8}"
-    ws              = ~r"[\t ]*"
+    ws              = ~r"[\t \u3000]*"
     comment         = ~r"//.*"
 """
 )

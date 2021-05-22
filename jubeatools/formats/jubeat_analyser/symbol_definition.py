@@ -12,7 +12,7 @@ beat_symbol_line_grammar = Grammar(
     line    = "*" symbol ":" number comment?
     symbol  = ws ~r"[^*#:|\-/\s]{1,2}" ws
     number  = ws ~r"\d+(\.\d+)?" ws
-    ws      = ~r"\s*"
+    ws      = ~r"[\t \u3000]*"
     comment = ~r"//.*"
     """
 )
