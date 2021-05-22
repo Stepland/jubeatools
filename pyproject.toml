@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jubeatools"
-version = "1.1.1"
+version = "1.1.2"
 description = "A toolbox for jubeat file formats"
 authors = ["Stepland <16676308+Stepland@users.noreply.github.com>"]
 readme = "README.md"
