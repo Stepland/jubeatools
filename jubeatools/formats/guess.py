@@ -72,7 +72,7 @@ def _dirty_jba_line_strip(line: str) -> str:
 
 
 def recognize_jubeat_analyser_format(path: Path) -> Format:
-    with path.open(encoding="shift-jis-2004") as f:
+    with path.open(encoding="shift-jis-2004", errors="surrogateescape") as f:
         lines = f.readlines()
 
     saw_jubeat_analyser_commands = False
