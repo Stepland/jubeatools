@@ -135,12 +135,15 @@ class MonoColumnParser(JubeatAnalyserParser):
 
     def append_chart_line(self, line: str) -> None:
         expected_length = 4 * self.bytes_per_panel
-        actual_length = len(line.encode("shift-jis-2004"))
+        actual_length = len(line.encode("shift-jis-2004", errors="surrogateescape"))
         if actual_length != expected_length:
             raise SyntaxError(f"Invalid chart line. Since for ")
         if self.bytes_per_panel == 1 and len(line) != 4:
             raise SyntaxError(f"Invalid chart line for #bpp=1 : {line}")
-        elif self.bytes_per_panel == 2 and len(line.encode("shift-jis-2004")) != 8:
+        elif (
+            self.bytes_per_panel == 2
+            and len(line.encode("shift-jis-2004", errors="surrogateescape")) != 8
+        ):
             raise SyntaxError(f"Invalid chart line for #bpp=2 : {line}")
         self.current_chart_lines.append(line)
 

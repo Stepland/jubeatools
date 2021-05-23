@@ -282,7 +282,9 @@ def make_full_dumper_from_jubeat_analyser_chart_dumper(
                 timing,
                 circle_free,
             )
-            file_bytes = chart_file.getvalue().encode("shift-jis-2004")
+            file_bytes = chart_file.getvalue().encode(
+                "shift-jis-2004", errors="surrogateescape"
+            )
             files.append(ChartFile(file_bytes, song, difficulty, chart))
 
         return files

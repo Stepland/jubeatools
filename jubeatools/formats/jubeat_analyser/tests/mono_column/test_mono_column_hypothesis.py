@@ -89,6 +89,6 @@ def test_that_full_chart_roundtrips(song: Song, circle_free: bool) -> None:
         Format.MONO_COLUMN,
         song,
         temp_path=temp_file_named_txt(),
-        bytes_decoder=lambda b: b.decode("shift-jis-2004"),
+        bytes_decoder=lambda b: b.decode("shift-jis-2004", errors="surrogateescape"),
         dump_options={"circle_free": circle_free},
     )

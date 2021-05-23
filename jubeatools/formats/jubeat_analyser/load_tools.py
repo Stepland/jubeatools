@@ -103,7 +103,9 @@ class DoubleColumnChartLine:
 
     def raise_if_position_unfit(self, bytes_per_panel: int) -> None:
         expected_length = 4 * bytes_per_panel
-        actual_length = len(self.position.encode("shift-jis-2004"))
+        actual_length = len(
+            self.position.encode("shift-jis-2004", errors="surrogateescape")
+        )
         if expected_length != actual_length:
             raise SyntaxError(
                 f"Invalid position part. Since #bpp={bytes_per_panel}, the "
@@ -115,7 +117,7 @@ class DoubleColumnChartLine:
         if self.timing is None:
             return
 
-        length = len(self.timing.encode("shift-jis-2004"))
+        length = len(self.timing.encode("shift-jis-2004", errors="surrogateescape"))
         if length % bytes_per_panel != 0:
             raise SyntaxError(
                 f"Invalid timing part. Since #bpp={bytes_per_panel}, the timing "
@@ -173,7 +175,7 @@ def split_double_byte_line(line: str) -> List[str]:
     >>> split_chart_line("口⑪①25")
     ... ["口","⑪","①","25"]
     """
-    encoded_line = line.encode("shift-jis-2004")
+    encoded_line = line.encode("shift-jis-2004", errors="surrogateescape")
     if len(encoded_line) % 2 != 0:
         raise ValueError(
             "Line of odd length encountered while trying to split a double-byte "
@@ -181,7 +183,9 @@ def split_double_byte_line(line: str) -> List[str]:
         )
     symbols = []
     for i in range(0, len(encoded_line), 2):
-        symbols.append(encoded_line[i : i + 2].decode("shift-jis-2004"))
+        symbols.append(
+            encoded_line[i : i + 2].decode("shift-jis-2004", errors="surrogateescape")
+        )
     return symbols
 
 
@@ -415,7 +419,9 @@ class JubeatAnalyserParser:
 
     def define_symbol(self, symbol: str, timing: Decimal) -> None:
         bpp = self.bytes_per_panel
-        length_as_shift_jis = len(symbol.encode("shift-jis-2004"))
+        length_as_shift_jis = len(
+            symbol.encode("shift-jis-2004", errors="surrogateescape")
+        )
         if length_as_shift_jis != bpp:
             raise ValueError(
                 f"Invalid symbol definition. Since #bpp={bpp}, timing symbols "
@@ -430,7 +436,10 @@ class JubeatAnalyserParser:
         self.symbols[symbol] = round_beats(timing)
 
     def is_short_line(self, line: str) -> bool:
-        return len(line.encode("shift-jis-2004")) < self.bytes_per_panel * 4
+        return (
+            len(line.encode("shift-jis-2004", errors="surrogateescape"))
+            < self.bytes_per_panel * 4
+        )
 
     def _split_chart_line(self, line: str) -> List[str]:
         if self.bytes_per_panel == 2:
@@ -466,15 +475,13 @@ class DoubleColumnFrame:
 
 
 def read_jubeat_analyser_file(path: Path) -> Optional[List[str]]:
-    try:
-        # The vast majority of memo files you will encounter will be propely
-        # decoded using shift-jis-2004. Get ready for endless fun with the small
-        # portion of files that won't
-        lines = path.read_text(encoding="shift-jis-2004").split("\n")
-    except UnicodeDecodeError:
-        return None
-    else:
-        return lines
+    """The vast majority of memo files you will encounter will be propely
+    decoded using shift-jis-2004. Some won't but jubeat analyser works at the
+    byte level so it doesn't care, here we use surrogateescape to handle
+    potential decoding errors"""
+    return path.read_text(encoding="shift-jis-2004", errors="surrogateescape").split(
+        "\n"
+    )
 
 
 load_folder = make_folder_loader(

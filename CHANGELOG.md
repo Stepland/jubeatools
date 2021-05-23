@@ -1,3 +1,10 @@
+# v1.1.3
+## Fixed
+- [jubeat-analyser] All files are read and written in `surrogateescape` error
+  mode to mimick the way jubeat analyser handles files at the byte level, without
+  caring about whether the whole file can be properly decoded as shift-jis or not
+  (Thanks Nomlas and Mintice for noticing this !)
+
 # v1.1.2
 ## Fixed
 - [jubeat-analyser]
