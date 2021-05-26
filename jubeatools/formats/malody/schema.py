@@ -27,7 +27,7 @@ class Metadata:
     version: Optional[str]  # freeform difficulty name
     id: Optional[int]
     mode: int
-    time: int  # creation timestamp ?
+    time: Optional[int]  # creation timestamp ?
     song: SongInfo
 
 
