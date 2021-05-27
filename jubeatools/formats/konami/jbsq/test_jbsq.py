@@ -1,4 +1,4 @@
-from hypothesis import given
+from hypothesis import given, reproduce_failure
 
 from jubeatools import song
 from jubeatools.formats import Format
@@ -15,5 +15,5 @@ def test_that_full_chart_roundtrips(song: song.Song) -> None:
         song,
         temp_path=open_temp_dir(),
         bytes_decoder=lambda b: str(jbsq.parse(b)),
-        load_options={"beat_snap": 24},
+        load_options={"beat_snap": 12},
     )

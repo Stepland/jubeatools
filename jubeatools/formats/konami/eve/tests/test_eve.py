@@ -13,5 +13,5 @@ def test_that_full_chart_roundtrips(song: song.Song) -> None:
         song,
         temp_path=open_temp_dir(),
         bytes_decoder=lambda b: b.decode("ascii"),
-        load_options={"beat_snap": 24},
+        load_options={"beat_snap": 12},
     )
