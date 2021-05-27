@@ -3,6 +3,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import List, Optional, Tuple, Union
 
+from marshmallow import EXCLUDE
 from marshmallow.validate import Range
 from marshmallow_dataclass import NewType, class_schema
 
@@ -10,6 +11,7 @@ from marshmallow_dataclass import NewType, class_schema
 class Ordered:
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 @dataclass

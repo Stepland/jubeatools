@@ -1,4 +1,4 @@
-from hypothesis import given, reproduce_failure
+from hypothesis import given
 
 from jubeatools import song
 from jubeatools.formats import Format
