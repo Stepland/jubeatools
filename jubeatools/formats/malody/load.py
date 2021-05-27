@@ -1,10 +1,11 @@
-import json
 import warnings
 from decimal import Decimal
 from fractions import Fraction
 from functools import reduce, singledispatch
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
+
+import simplejson as json
 
 from jubeatools import song
 from jubeatools.formats import timemap
@@ -22,14 +23,14 @@ def load_malody(path: Path, **kwargs: Any) -> song.Song:
 
 def load_file(path: Path) -> Any:
     with path.open() as f:
-        return json.load(f)
+        return json.load(f, use_decimal=True)
 
 
 load_folder = make_folder_loader("*.mc", load_file)
 
 
 def load_malody_file(raw_dict: dict) -> song.Song:
-    file: malody.Chart = malody.Chart.Schema().load(raw_dict)
+    file: malody.Chart = malody.CHART_SCHEMA.load(raw_dict)
     if file.meta.mode != malody.Mode.PAD:
         raise ValueError("This file is not a Malody Pad Chart (Malody's jubeat mode)")
 
@@ -86,7 +87,7 @@ def load_timing_info(
 
 def load_notes(events: List[malody.Event]) -> List[Union[song.TapNote, song.LongNote]]:
     # filter out sound events
-    notes = filter(lambda e: isinstance(e, (malody.TapNote, malody.TapNote)), events)
+    notes = filter(lambda e: isinstance(e, (malody.TapNote, malody.LongNote)), events)
     return [load_note(n) for n in notes]
 
 

@@ -10,7 +10,7 @@ def guess_format(path: Path) -> Format:
         raise ValueError("Can't guess chart format for a folder")
 
     try:
-        return recognize_memon_version(path)
+        return recognize_json_formats(path)
     except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
         pass
 
@@ -28,19 +28,26 @@ def guess_format(path: Path) -> Format:
     raise ValueError("Unrecognized file format")
 
 
-def recognize_memon_version(path: Path) -> Format:
+def recognize_json_formats(path: Path) -> Format:
     with path.open() as f:
         obj = json.load(f)
 
+    if not isinstance(obj, dict):
+        raise ValueError("Top level value is not an object")
+
+    if obj.keys() >= {"metadata", "data"}:
+        return recognize_memon_version(obj)
+    elif obj.keys() >= {"meta", "time", "note"}:
+        return Format.MALODY
+    else:
+        raise ValueError("Unrecognized file format")
+
+
+def recognize_memon_version(obj: dict) -> Format:
     try:
         version = obj["version"]
     except KeyError:
         return Format.MEMON_LEGACY
-    except TypeError:
-        raise ValueError(
-            "This JSON file is not a correct memon file : the top-level "
-            "value is not an object"
-        )
 
     if version == "0.1.0":
         return Format.MEMON_0_1_0
