@@ -25,3 +25,4 @@ jubeatools ${source} ${destination} -f ${output format} (... format specific opt
 |                 | mono-column (1列形式) | ✔️     | ✔️      |
 | jubeat (arcade) | .eve                 | ✔️     | ✔️      |
 | jubeat plus     | .jbsq                | ✔️     | ✔️      |
+| malody          | .mc (Pad Mode)       | ✔️     | ✔️      |
