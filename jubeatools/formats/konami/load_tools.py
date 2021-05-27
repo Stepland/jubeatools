@@ -3,6 +3,7 @@ from typing import Iterable, List
 
 from jubeatools import song
 from jubeatools.formats.load_tools import round_beats
+from jubeatools.formats.timemap import BPMAtSecond, TimeMap
 from jubeatools.utils import group_by
 
 from .commons import (
@@ -14,7 +15,6 @@ from .commons import (
     ticks_to_seconds,
     value_to_truncated_bpm,
 )
-from .timemap import BPMAtSecond, TimeMap
 
 
 def make_chart_from_events(events: Iterable[Event], beat_snap: int = 240) -> song.Chart:

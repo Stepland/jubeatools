@@ -5,7 +5,7 @@ from jubeatools.formats import Format
 from jubeatools.formats.konami.testutils import eve_compatible_song, open_temp_dir
 from jubeatools.testutils.test_patterns import dump_and_load_then_compare
 
-from ..construct import jbsq
+from .construct import jbsq
 
 
 @given(eve_compatible_song())

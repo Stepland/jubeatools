@@ -6,9 +6,9 @@ from typing import List
 from more_itertools import numeric_range
 
 from jubeatools import song
+from jubeatools.formats.timemap import TimeMap
 
 from .commons import AnyNote, Command, Event, bpm_to_value, ticks_at_beat
-from .timemap import TimeMap
 
 
 def make_events_from_chart(notes: List[AnyNote], timing: song.Timing) -> List[Event]:

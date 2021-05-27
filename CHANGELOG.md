@@ -1,3 +1,7 @@
+# v1.2.0
+## Added
+- [malody] 🎉 initial malody support !
+
 # v1.1.3
 ## Fixed
 - [jubeat-analyser] All files are read and written in `surrogateescape` error

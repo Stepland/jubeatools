@@ -3,7 +3,7 @@ from fractions import Fraction
 from hypothesis import given
 
 from jubeatools import song
-from jubeatools.formats.konami.timemap import TimeMap
+from jubeatools.formats.timemap import TimeMap
 from jubeatools.testutils import strategies as jbst
 from jubeatools.utils import group_by
 

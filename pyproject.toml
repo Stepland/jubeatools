@@ -19,6 +19,7 @@ sortedcontainers = "^2.3.0"
 python-constraint = "^1.4.0"
 construct = "~=2.10"
 construct-typing = "^0.4.2"
+marshmallow-dataclass = {extras = ["union", "enum"], version = "^8.4.1"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"

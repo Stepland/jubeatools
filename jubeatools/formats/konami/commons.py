@@ -8,8 +8,7 @@ from itertools import count
 from typing import Iterator, Union
 
 from jubeatools import song
-
-from .timemap import TimeMap
+from jubeatools.formats.timemap import TimeMap
 
 AnyNote = Union[song.TapNote, song.LongNote]
 

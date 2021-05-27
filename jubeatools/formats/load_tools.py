@@ -1,7 +1,7 @@
 from decimal import Decimal
 from fractions import Fraction
 from pathlib import Path
-from typing import Dict, Iterable, Protocol, TypeVar, Union
+from typing import Dict, Iterable, Optional, Protocol, TypeVar, Union
 
 from jubeatools import song
 
@@ -14,7 +14,7 @@ class FileLoader(Protocol[T_co]):
     contents in whatever form suitable for the current format. Returns None in
     case of error"""
 
-    def __call__(self, path: Path) -> T_co:
+    def __call__(self, path: Path) -> Optional[T_co]:
         ...
 
 
