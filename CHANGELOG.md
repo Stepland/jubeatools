@@ -1,6 +1,6 @@
 # v1.2.1
 ## Fixed
-- [malody] Parsing a malody file with keys that are unused for conversion
+- [malody] Parsing a file with keys that are unused for conversion
   (like `meta.mode_ext` or `extra`) would fire errors, not anymore !
 
 # v1.2.0
