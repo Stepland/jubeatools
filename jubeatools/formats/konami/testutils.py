@@ -11,7 +11,7 @@ from jubeatools.testutils import strategies as jbst
 from jubeatools.testutils.typing import DrawFunc
 
 simple_beat_strat = jbst.beat_time(
-    denominator_strat=st.sampled_from([4, 8, 3]), max_section=10
+    denominator_strat=st.sampled_from([4, 3]), max_section=10
 )
 
 
@@ -29,7 +29,7 @@ def eve_compatible_song(draw: DrawFunc) -> song.Song:
                 time_strat=jbst.beat_time(
                     min_section=1,
                     max_section=10,
-                    denominator_strat=st.sampled_from([4, 8, 3]),
+                    denominator_strat=st.sampled_from([4, 3]),
                 ),
             ),
             notes_strat=jbst.notes(
@@ -40,7 +40,7 @@ def eve_compatible_song(draw: DrawFunc) -> song.Song:
                         duration_strat=jbst.beat_time(
                             min_numerator=1,
                             max_section=3,
-                            denominator_strat=st.sampled_from([4, 8, 3]),
+                            denominator_strat=st.sampled_from([4, 3]),
                         ),
                     ),
                 ),
