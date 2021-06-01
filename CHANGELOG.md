@@ -1,3 +1,7 @@
+# v1.2.2
+## Fixed
+- [malody] Dumping does not write placeholder `null` values anymore
+
 # v1.2.1
 ## Fixed
 - [malody] Parsing a file with keys that are unused for conversion

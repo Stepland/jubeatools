@@ -21,11 +21,11 @@ def dump_and_load_then_compare(
     dump_options = dump_options or {}
     loader = LOADERS[format_]
     dumper = DUMPERS[format_]
-    with temp_path as path:
-        files = dumper(song, path, **dump_options)
-        for path, bytes_ in files.items():
-            path.write_bytes(bytes_)
-            note(f"Wrote to {path} :\n{bytes_decoder(bytes_)}")
-            assert guess_format(path) == format_
-        recovered_song = loader(path, **load_options)
+    with temp_path as folder_path:
+        files = dumper(song, folder_path, **dump_options)
+        for file_path, bytes_ in files.items():
+            file_path.write_bytes(bytes_)
+            note(f"Wrote to {file_path} :\n{bytes_decoder(bytes_)}")
+            assert guess_format(file_path) == format_
+        recovered_song = loader(folder_path, **load_options)
         assert recovered_song == song
