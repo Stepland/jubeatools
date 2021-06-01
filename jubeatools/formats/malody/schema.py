@@ -1,21 +1,15 @@
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
-from marshmallow import EXCLUDE
+from marshmallow import EXCLUDE, Schema, post_dump
 from marshmallow.validate import Range
 from marshmallow_dataclass import NewType, class_schema
 
 
-class Ordered:
-    class Meta:
-        ordered = True
-        unknown = EXCLUDE
-
-
 @dataclass
-class SongInfo(Ordered):
+class SongInfo:
     title: Optional[str]
     artist: Optional[str]
     id: Optional[int]
@@ -32,7 +26,7 @@ class Mode(int, Enum):
 
 
 @dataclass
-class Metadata(Ordered):
+class Metadata:
     cover: Optional[str]  # path to album art ?
     creator: Optional[str]  # Chart author
     background: Optional[str]  # path to background image
@@ -51,7 +45,7 @@ StrictlyPositiveDecimal = NewType(
 
 
 @dataclass
-class BPMEvent(Ordered):
+class BPMEvent:
     beat: BeatTime
     bpm: StrictlyPositiveDecimal
 
@@ -60,13 +54,13 @@ ButtonIndex = NewType("ButtonIndex", int, validate=Range(min=0, max=15))
 
 
 @dataclass
-class TapNote(Ordered):
+class TapNote:
     beat: BeatTime
     index: ButtonIndex
 
 
 @dataclass
-class LongNote(Ordered):
+class LongNote:
     beat: BeatTime
     index: ButtonIndex
     endbeat: BeatTime
@@ -74,7 +68,7 @@ class LongNote(Ordered):
 
 
 @dataclass
-class Sound(Ordered):
+class Sound:
     """Used both for the background music and keysounds"""
 
     beat: BeatTime
@@ -95,10 +89,20 @@ Event = Union[Sound, LongNote, TapNote]
 
 
 @dataclass
-class Chart(Ordered):
+class Chart:
     meta: Metadata
     time: List[BPMEvent] = field(default_factory=list)
     note: List[Event] = field(default_factory=list)
 
 
-CHART_SCHEMA = class_schema(Chart)()
+class BaseSchema(Schema):
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+    @post_dump
+    def remove_none_values(self, data: dict, **kwargs: Any) -> dict:
+        return {key: value for key, value in data.items() if value is not None}
+
+
+CHART_SCHEMA = class_schema(Chart, base_schema=BaseSchema)()

@@ -12,7 +12,26 @@ from jubeatools.testutils.typing import DrawFunc
 
 @st.composite
 def memo_compatible_metadata(draw: DrawFunc) -> song.Metadata:
-    text_strat = st.text(alphabet=st.characters(min_codepoint=0x20, max_codepoint=0x7E))
+    # some ranges that are valid in shift-jis
+    text_strat = st.text(
+        alphabet=st.one_of(
+            *(
+                st.characters(min_codepoint=a, max_codepoint=b)
+                for a, b in (
+                    (0x20, 0x7F),
+                    (0xB6, 0x109),
+                    (0x410, 0x44F),
+                    (0x24D0, 0x24E9),
+                    (0x3041, 0x3096),
+                    (0x309B, 0x30FF),
+                    (0xFA30, 0xFA6A),
+                    (0xFF01, 0xFF3B),
+                    (0xFF3D, 0xFF5D),
+                    (0xFF61, 0xFF9F),
+                )
+            )
+        )
+    )
     metadata: song.Metadata = draw(
         jbst.metadata(text_strat=text_strat, path_strat=text_strat)
     )

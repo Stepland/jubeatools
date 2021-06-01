@@ -1,7 +1,7 @@
 import time
 from functools import singledispatch
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import simplejson as json
 
@@ -30,7 +30,7 @@ dump_malody = make_dumper_from_chart_file_dumper(
 
 
 def dump_malody_chart(
-    metadata: song.Metadata, dif: str, chart: song.Chart, timing: song.Timing
+    metadata: song.Metadata, dif: Optional[str], chart: song.Chart, timing: song.Timing
 ) -> malody.Chart:
     meta = dump_metadata(metadata, dif)
     time = dump_timing(timing)
@@ -40,10 +40,10 @@ def dump_malody_chart(
     return malody.Chart(meta=meta, time=time, note=notes)
 
 
-def dump_metadata(metadata: song.Metadata, dif: str) -> malody.Metadata:
+def dump_metadata(metadata: song.Metadata, dif: Optional[str]) -> malody.Metadata:
     return malody.Metadata(
-        cover="",
-        creator="",
+        cover=None,
+        creator=None,
         background=none_or(str, metadata.cover),
         version=dif,
         id=0,

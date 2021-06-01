@@ -24,7 +24,7 @@ from jubeatools.testutils.strategies import notes as notes_strat
 from jubeatools.testutils.strategies import tap_note
 from jubeatools.testutils.test_patterns import dump_and_load_then_compare
 
-from ..test_utils import memo_compatible_song, temp_file_named_txt
+from ..test_utils import memo_compatible_song
 
 
 @given(st.sets(tap_note(), min_size=1, max_size=100))
@@ -88,7 +88,6 @@ def test_that_full_chart_roundtrips(song: Song, circle_free: bool) -> None:
     dump_and_load_then_compare(
         Format.MONO_COLUMN,
         song,
-        temp_path=temp_file_named_txt(),
         bytes_decoder=lambda b: b.decode("shift-jis-2004", errors="surrogateescape"),
         dump_options={"circle_free": circle_free},
     )
