@@ -2,7 +2,7 @@
 ## Changed
 - Slashes in filenames are now ignored
 ## Fixed
-- Fix bug that when using braces in filenames
+- Bug when using braces in output filenames
 - [malody] Dumping does not write placeholder `null` values anymore
 
 # v1.2.1
