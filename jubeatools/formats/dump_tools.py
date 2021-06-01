@@ -6,6 +6,7 @@ from typing import AbstractSet, Any, Dict, Iterator, TypedDict
 from jubeatools.formats.filetypes import ChartFile
 from jubeatools.formats.typing import ChartFileDumper, Dumper
 from jubeatools.song import Difficulty, Song
+from jubeatools.utils import none_or
 
 DIFFICULTY_NUMBER: Dict[str, int] = {
     Difficulty.BASIC: 1,
@@ -83,12 +84,32 @@ class FormatParameters(TypedDict, total=False):
 
 def extract_format_params(chartfile: ChartFile, dedup_index: int) -> FormatParameters:
     return FormatParameters(
-        title=chartfile.song.metadata.title or "",
-        difficulty=chartfile.difficulty,
+        title=none_or(slugify, chartfile.song.metadata.title) or "",
+        difficulty=slugify(chartfile.difficulty),
         difficulty_index=str(DIFFICULTY_INDEX.get(chartfile.difficulty, 2)),
         difficulty_number=str(DIFFICULTY_NUMBER.get(chartfile.difficulty, 3)),
         dedup="" if dedup_index == 0 else f"-{dedup_index}",
     )
+
+
+def slugify(s: str) -> str:
+    s = remove_slashes(s)
+    s = double_braces(s)
+    return s
+
+
+SLASHES = str.maketrans({"/": "", "\\": ""})
+
+
+def remove_slashes(s: str) -> str:
+    return s.translate(SLASHES)
+
+
+BRACES = str.maketrans({"{": "{{", "}": "}}"})
+
+
+def double_braces(s: str) -> str:
+    return s.translate(BRACES)
 
 
 class BetterStringFormatter(string.Formatter):
