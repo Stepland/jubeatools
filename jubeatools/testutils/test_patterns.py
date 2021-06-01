@@ -1,5 +1,7 @@
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, ContextManager, Optional
+from typing import Callable, ContextManager, Iterator, Optional
 
 from hypothesis import note
 
@@ -9,11 +11,17 @@ from jubeatools.formats.enum import Format
 from jubeatools.formats.guess import guess_format
 
 
+@contextmanager
+def open_temp_dir() -> Iterator[Path]:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
 def dump_and_load_then_compare(
     format_: Format,
     song: song.Song,
-    temp_path: ContextManager[Path],
     bytes_decoder: Callable[[bytes], str],
+    temp_path: Callable[[], ContextManager[Path]] = open_temp_dir,
     load_options: Optional[dict] = None,
     dump_options: Optional[dict] = None,
 ) -> None:
@@ -21,7 +29,7 @@ def dump_and_load_then_compare(
     dump_options = dump_options or {}
     loader = LOADERS[format_]
     dumper = DUMPERS[format_]
-    with temp_path as folder_path:
+    with temp_path() as folder_path:
         files = dumper(song, folder_path, **dump_options)
         for file_path, bytes_ in files.items():
             file_path.write_bytes(bytes_)

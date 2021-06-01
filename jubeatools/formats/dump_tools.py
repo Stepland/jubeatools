@@ -75,9 +75,9 @@ class FormatParameters(TypedDict, total=False):
     # uppercase BSC ADV EXT
     difficulty: str
     # 0-based
-    difficulty_index: int
+    difficulty_index: str
     # 1-based
-    difficulty_number: int
+    difficulty_number: str
     dedup: str
 
 
@@ -85,8 +85,8 @@ def extract_format_params(chartfile: ChartFile, dedup_index: int) -> FormatParam
     return FormatParameters(
         title=chartfile.song.metadata.title or "",
         difficulty=chartfile.difficulty,
-        difficulty_index=DIFFICULTY_INDEX.get(chartfile.difficulty, 3),
-        difficulty_number=DIFFICULTY_NUMBER.get(chartfile.difficulty, 4),
+        difficulty_index=str(DIFFICULTY_INDEX.get(chartfile.difficulty, 2)),
+        difficulty_number=str(DIFFICULTY_NUMBER.get(chartfile.difficulty, 3)),
         dedup="" if dedup_index == 0 else f"-{dedup_index}",
     )
 

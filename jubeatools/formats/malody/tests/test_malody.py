@@ -8,7 +8,6 @@ from hypothesis import strategies as st
 
 from jubeatools import song
 from jubeatools.formats import Format
-from jubeatools.formats.konami.testutils import open_temp_dir
 from jubeatools.formats.malody import schema as malody
 from jubeatools.formats.malody.dump import dump_malody_chart
 from jubeatools.testutils import strategies as jbst
@@ -50,7 +49,6 @@ def test_that_full_chart_roundtrips(s: song.Song) -> None:
     dump_and_load_then_compare(
         Format.MALODY,
         s,
-        temp_path=open_temp_dir(),
         bytes_decoder=lambda b: b.decode("utf-8"),
     )
 

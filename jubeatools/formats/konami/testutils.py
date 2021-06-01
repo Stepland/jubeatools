@@ -1,8 +1,4 @@
-import tempfile
-from contextlib import contextmanager
 from decimal import Decimal
-from pathlib import Path
-from typing import Iterator
 
 from hypothesis import strategies as st
 
@@ -53,9 +49,3 @@ def eve_compatible_song(draw: DrawFunc) -> song.Song:
         metadata=song.Metadata(),
         charts={diff: chart},
     )
-
-
-@contextmanager
-def open_temp_dir() -> Iterator[Path]:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        yield Path(temp_dir)
