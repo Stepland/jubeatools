@@ -24,12 +24,11 @@ from jubeatools.song import (
     TapNote,
     Timing,
 )
-from jubeatools.testutils.typing import DrawFunc
 
 
 @st.composite
 def beat_time(
-    draw: DrawFunc,
+    draw: st.DrawFn,
     min_section: Optional[int] = None,
     max_section: Optional[int] = None,
     min_numerator: Optional[int] = None,
@@ -47,7 +46,7 @@ def beat_time(
         min_value = max(min_value, min_numerator)
 
     if max_section is not None:
-        max_value = denominator * 4 * max_section
+        max_value: Optional[int] = denominator * 4 * max_section
     else:
         max_value = None
 
@@ -62,7 +61,7 @@ def beat_time(
 
 
 @st.composite
-def note_position(draw: DrawFunc) -> NotePosition:
+def note_position(draw: st.DrawFn) -> NotePosition:
     x = draw(st.integers(min_value=0, max_value=3))
     y = draw(st.integers(min_value=0, max_value=3))
     return NotePosition(x, y)
@@ -70,7 +69,7 @@ def note_position(draw: DrawFunc) -> NotePosition:
 
 @st.composite
 def tap_note(
-    draw: DrawFunc, time_strat: st.SearchStrategy[BeatsTime] = beat_time(max_section=10)
+    draw: st.DrawFn, time_strat: st.SearchStrategy[BeatsTime] = beat_time(max_section=10)
 ) -> TapNote:
     time = draw(time_strat)
     position = draw(note_position())
@@ -79,7 +78,7 @@ def tap_note(
 
 @st.composite
 def long_note(
-    draw: DrawFunc,
+    draw: st.DrawFn,
     time_strat: st.SearchStrategy[BeatsTime] = beat_time(max_section=10),
     duration_strat: st.SearchStrategy[BeatsTime] = beat_time(
         min_numerator=1, max_section=3
@@ -101,7 +100,7 @@ def long_note(
 
 
 @st.composite
-def bad_notes(draw: DrawFunc, longs: bool) -> Set[Union[TapNote, LongNote]]:
+def bad_notes(draw: st.DrawFn, longs: bool) -> Set[Union[TapNote, LongNote]]:
     note_strat = tap_note()
     if longs:
         note_strat = st.one_of(note_strat, long_note())
@@ -111,7 +110,7 @@ def bad_notes(draw: DrawFunc, longs: bool) -> Set[Union[TapNote, LongNote]]:
 
 @st.composite
 def notes(
-    draw: DrawFunc,
+    draw: st.DrawFn,
     collisions: bool = False,
     note_strat: st.SearchStrategy[Union[TapNote, LongNote]] = st.one_of(
         tap_note(), long_note()
@@ -154,14 +153,14 @@ def notes(
 
 
 @st.composite
-def bpms(draw: DrawFunc) -> Decimal:
+def bpms(draw: st.DrawFn) -> Decimal:
     d: Decimal = draw(st.decimals(min_value=1, max_value=1000, places=3))
     return d
 
 
 @st.composite
 def bpm_changes(
-    draw: DrawFunc,
+    draw: st.DrawFn,
     bpm_strat: st.SearchStrategy[Decimal] = bpms(),
     time_strat: st.SearchStrategy[BeatsTime] = beat_time(min_section=1, max_section=10),
 ) -> BPMEvent:
@@ -172,7 +171,7 @@ def bpm_changes(
 
 @st.composite
 def timing_info(
-    draw: DrawFunc,
+    draw: st.DrawFn,
     with_bpm_changes: bool = True,
     bpm_strat: st.SearchStrategy[Decimal] = bpms(),
     beat_zero_offset_strat: st.SearchStrategy[Decimal] = st.decimals(
@@ -201,7 +200,7 @@ def get_bpm_change_time(b: BPMEvent) -> BeatsTime:
 
 
 @st.composite
-def level(draw: DrawFunc) -> Union[int, Decimal]:
+def level(draw: st.DrawFn) -> Union[int, Decimal]:
     d: Union[int, Decimal] = draw(
         st.one_of(
             st.integers(min_value=0), st.decimals(min_value=0, max_value=10.9, places=1)
@@ -212,7 +211,7 @@ def level(draw: DrawFunc) -> Union[int, Decimal]:
 
 @st.composite
 def chart(
-    draw: DrawFunc,
+    draw: st.DrawFn,
     timing_strat: st.SearchStrategy[Timing] = timing_info(),
     notes_strat: st.SearchStrategy[Iterable[Union[TapNote, LongNote]]] = notes(),
     level_strat: st.SearchStrategy[Union[int, Decimal]] = level(),
@@ -228,7 +227,7 @@ def chart(
 
 
 @st.composite
-def preview(draw: DrawFunc) -> Preview:
+def preview(draw: st.DrawFn) -> Preview:
     start = draw(
         st.decimals(min_value=0, allow_nan=False, allow_infinity=False, places=3)
     )
@@ -240,7 +239,7 @@ def preview(draw: DrawFunc) -> Preview:
 
 @st.composite
 def metadata(
-    draw: DrawFunc,
+    draw: st.DrawFn,
     text_strat: st.SearchStrategy[str] = st.text(),
     path_strat: st.SearchStrategy[str] = st.text(),
 ) -> Metadata:
@@ -250,7 +249,7 @@ def metadata(
         audio=Path(draw(path_strat)),
         cover=Path(draw(path_strat)),
         preview=draw(st.one_of(st.none(), preview())),
-        preview_file=draw(path_strat),
+        preview_file=Path(draw(path_strat)),
     )
 
 
@@ -262,7 +261,7 @@ class TimingOption(Flag):
 
 @st.composite
 def song(
-    draw: DrawFunc,
+    draw: st.DrawFn,
     diffs_strat: st.SearchStrategy[Set[str]] = st.sets(
         st.sampled_from(list(d.value for d in Difficulty)), min_size=1, max_size=3
     ),

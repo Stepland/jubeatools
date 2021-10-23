@@ -7,11 +7,10 @@ from hypothesis import strategies as st
 
 from jubeatools import song
 from jubeatools.testutils import strategies as jbst
-from jubeatools.testutils.typing import DrawFunc
 
 
 @st.composite
-def memo_compatible_metadata(draw: DrawFunc) -> song.Metadata:
+def memo_compatible_metadata(draw: st.DrawFn) -> song.Metadata:
     # some ranges that are valid in shift-jis
     text_strat = st.text(
         alphabet=st.one_of(
@@ -41,7 +40,7 @@ def memo_compatible_metadata(draw: DrawFunc) -> song.Metadata:
 
 
 @st.composite
-def memo_compatible_song(draw: DrawFunc) -> song.Song:
+def memo_compatible_song(draw: st.DrawFn) -> song.Song:
     """Memo only supports one difficulty per file"""
     diff = draw(st.sampled_from(list(d.value for d in song.Difficulty)))
     chart = draw(

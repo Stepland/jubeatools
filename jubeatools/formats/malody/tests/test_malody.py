@@ -12,23 +12,22 @@ from jubeatools.formats.malody import schema as malody
 from jubeatools.formats.malody.dump import dump_malody_chart
 from jubeatools.testutils import strategies as jbst
 from jubeatools.testutils.test_patterns import dump_and_load_then_compare
-from jubeatools.testutils.typing import DrawFunc
 
 
 @st.composite
-def difficulty(draw: DrawFunc) -> str:
+def difficulty(draw: st.DrawFn) -> str:
     d: song.Difficulty = draw(st.sampled_from(list(song.Difficulty)))
     return d.value
 
 
 @st.composite
-def chart(draw: DrawFunc) -> song.Chart:
+def chart(draw: st.DrawFn) -> song.Chart:
     c: song.Chart = draw(jbst.chart(level_strat=st.just(Decimal(0))))
     return c
 
 
 @st.composite
-def metadata(draw: DrawFunc) -> song.Metadata:
+def metadata(draw: st.DrawFn) -> song.Metadata:
     metadata: song.Metadata = draw(jbst.metadata())
     metadata.preview = None
     metadata.preview_file = None
@@ -36,7 +35,7 @@ def metadata(draw: DrawFunc) -> song.Metadata:
 
 
 @st.composite
-def malody_song(draw: DrawFunc) -> song.Song:
+def malody_song(draw: st.DrawFn) -> song.Song:
     """Malody files only hold one chart and have limited metadata"""
     diff = draw(difficulty())
     chart_ = draw(chart())

@@ -4,7 +4,6 @@ from hypothesis import strategies as st
 
 from jubeatools import song
 from jubeatools.testutils import strategies as jbst
-from jubeatools.testutils.typing import DrawFunc
 
 simple_beat_strat = jbst.beat_time(
     denominator_strat=st.sampled_from([4, 3]), max_section=10
@@ -12,7 +11,7 @@ simple_beat_strat = jbst.beat_time(
 
 
 @st.composite
-def eve_compatible_song(draw: DrawFunc) -> song.Song:
+def eve_compatible_song(draw: st.DrawFn) -> song.Song:
     """eve only keeps notes, timing info and difficulty,
     the precision you can get out of it is also severly limited"""
     diff = draw(st.sampled_from(list(song.Difficulty)))

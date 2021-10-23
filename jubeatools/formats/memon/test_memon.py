@@ -8,7 +8,6 @@ from hypothesis import given
 from jubeatools import song
 from jubeatools.formats.typing import Dumper, Loader
 from jubeatools.testutils import strategies as jbst
-from jubeatools.testutils.typing import DrawFunc
 
 from . import (
     dump_memon_0_1_0,
@@ -35,7 +34,7 @@ def dump_and_load(
 
 
 @st.composite
-def memon_diffs(draw: DrawFunc) -> Set[str]:
+def memon_diffs(draw: st.DrawFn) -> Set[str]:
     simple_diff_names = st.sampled_from(list(d.value for d in song.Difficulty))
     diff_names = st.one_of(
         simple_diff_names,
@@ -50,7 +49,7 @@ def memon_diffs(draw: DrawFunc) -> Set[str]:
 
 
 @st.composite
-def memon_legacy_compatible_song(draw: DrawFunc) -> song.Song:
+def memon_legacy_compatible_song(draw: st.DrawFn) -> song.Song:
     """Memon versions below v0.2.0 do not support any preview metadata"""
     random_song: song.Song = draw(
         jbst.song(
@@ -78,7 +77,7 @@ def test_memon_0_1_0(song: song.Song) -> None:
 
 
 @st.composite
-def memon_0_2_0_compatible_song(draw: DrawFunc) -> song.Song:
+def memon_0_2_0_compatible_song(draw: st.DrawFn) -> song.Song:
     """Memon v0.2.0 does not support preview_file"""
     random_song: song.Song = draw(
         jbst.song(
