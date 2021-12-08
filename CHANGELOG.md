@@ -1,3 +1,9 @@
+# Unreleased
+## Fixed
+- Loaders and Dumpers would recieve options with unwanted default values when
+  their corresponding flags were not passed to the commandline, resulting
+  in weird bugs, not anymore ! #17
+
 # v1.2.2
 ## Changed
 - Slashes in filenames are now ignored

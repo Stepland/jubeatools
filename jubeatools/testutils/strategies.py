@@ -69,7 +69,8 @@ def note_position(draw: st.DrawFn) -> NotePosition:
 
 @st.composite
 def tap_note(
-    draw: st.DrawFn, time_strat: st.SearchStrategy[BeatsTime] = beat_time(max_section=10)
+    draw: st.DrawFn,
+    time_strat: st.SearchStrategy[BeatsTime] = beat_time(max_section=10),
 ) -> TapNote:
     time = draw(time_strat)
     position = draw(note_position())
