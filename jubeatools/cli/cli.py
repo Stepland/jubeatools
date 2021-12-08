@@ -50,8 +50,8 @@ def convert(
     dst: str,
     input_format: Optional[Format],
     output_format: Format,
-    loader_options: Dict[str, Any],
-    dumper_options: Dict[str, Any],
+    loader_options: Optional[Dict[str, Any]] = None,
+    dumper_options: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Convert SRC to DST using the format specified by -f"""
     if input_format is None:
@@ -68,7 +68,9 @@ def convert(
     except KeyError:
         raise ValueError(f"Unsupported output format : {input_format}")
 
+    loader_options = loader_options or {}
     song = loader(Path(src), **loader_options)
+    dumper_options = dumper_options or {}
     files = dumper(song, Path(dst), **dumper_options)
     for path, contents in files.items():
         with path.open("wb") as f:
