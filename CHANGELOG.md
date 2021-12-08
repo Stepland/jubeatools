@@ -1,4 +1,4 @@
-# Unreleased
+# v1.2.3
 ## Fixed
 - Loaders and Dumpers would recieve options with unwanted default values when
   their corresponding flags were not passed to the commandline, resulting

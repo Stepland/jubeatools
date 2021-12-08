@@ -1,4 +1,4 @@
-"""Collection of tools realted to dumping to jubeat analyser formats"""
+"""Collection of tools related to dumping to jubeat analyser formats"""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field

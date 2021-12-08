@@ -56,8 +56,7 @@ command_grammar = Grammar(
 
 class CommandVisitor(NodeVisitor):
 
-    """Returns a (key, value) tuple or None if the line contains no useful
-    information for the parser (a comment or an empty line)"""
+    """Returns a (key, value) tuple"""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
