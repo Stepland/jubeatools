@@ -299,7 +299,8 @@ def _dump_memo2_chart(
     file.write(f"// https://github.com/Stepland/jubeatools\n\n")
 
     # Header
-    file.write(dump_command("lev", Decimal(chart.level)) + "\n")
+    if chart.level is not None:
+        file.write(dump_command("lev", Decimal(chart.level)) + "\n")
     file.write(dump_command("dif", DIFFICULTY_NUMBER.get(difficulty, 1)) + "\n")
     if metadata.audio is not None:
         file.write(dump_command("m", metadata.audio) + "\n")

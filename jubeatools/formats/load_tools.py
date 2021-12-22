@@ -27,7 +27,9 @@ class FolderLoader(Protocol[T]):
         ...
 
 
-def make_folder_loader(glob_pattern: str, file_loader: FileLoader) -> FolderLoader:
+def make_folder_loader(
+    glob_pattern: str, file_loader: FileLoader[T]
+) -> FolderLoader[T]:
     def folder_loader(path: Path) -> Dict[Path, T]:
         files: Dict[Path, T] = {}
         if path.is_dir():

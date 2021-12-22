@@ -16,7 +16,8 @@ jubeatools ${source} ${destination} -f ${output format} (... format specific opt
 ## Which formats are supported
 |                 |                      | input | output |
 |-----------------|----------------------|:-----:|:------:|
-| memon           | v0.2.0               | ✔️     | ✔️      |
+| memon           | v0.3.0               | ✔️     | ✔️      |
+|                 | v0.2.0               | ✔️     | ✔️      |
 |                 | v0.1.0               | ✔️     | ✔️      |
 |                 | legacy               | ✔️     | ✔️      |
 | jubeat analyser | #memo2               | ✔️     | ✔️      |

@@ -9,7 +9,7 @@ import simplejson as json
 
 from jubeatools import song
 from jubeatools.formats import timemap
-from jubeatools.formats.load_tools import make_folder_loader
+from jubeatools.formats.load_tools import FolderLoader, make_folder_loader
 from jubeatools.utils import none_or
 
 from . import schema as malody
@@ -26,7 +26,7 @@ def load_file(path: Path) -> Any:
         return json.load(f, use_decimal=True)
 
 
-load_folder = make_folder_loader("*.mc", load_file)
+load_folder: FolderLoader[Any] = make_folder_loader("*.mc", load_file)
 
 
 def load_malody_file(raw_dict: dict) -> song.Song:

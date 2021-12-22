@@ -20,7 +20,7 @@ def open_temp_dir() -> Iterator[Path]:
 def dump_and_load_then_compare(
     format_: Format,
     song: song.Song,
-    bytes_decoder: Callable[[bytes], str],
+    bytes_decoder: Callable[[bytes], str] = lambda b: b.decode("utf-8"),
     temp_path: Callable[[], ContextManager[Path]] = open_temp_dir,
     load_options: Optional[dict] = None,
     dump_options: Optional[dict] = None,

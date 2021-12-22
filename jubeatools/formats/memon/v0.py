@@ -1,7 +1,8 @@
+from functools import reduce
 from io import StringIO
 from itertools import chain
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Callable, Dict, List, Union
 
 import simplejson as json
 from marshmallow import (
@@ -15,7 +16,11 @@ from marshmallow import (
 from multidict import MultiDict
 
 from jubeatools import song as jbt
-from jubeatools.utils import lcm
+from jubeatools.formats.dump_tools import FileNameFormat
+from jubeatools.formats.filetypes import SongFile
+from jubeatools.formats.load_tools import FolderLoader, make_folder_loader
+from jubeatools.formats.typing import Dumper, Loader
+from jubeatools.utils import lcm, none_or
 
 # v0.x.x long note value :
 #
@@ -102,6 +107,12 @@ class MemonMetadata_0_2_0(MemonMetadata_0_1_0):
     preview = fields.Nested(MemonPreview)
 
 
+class MemonMetadata_0_3_0(MemonMetadata_0_2_0):
+    audio = fields.String(required=False, data_key="music path")
+    cover = fields.String(required=False, data_key="album cover path")
+    preview_path = fields.String(data_key="preview path")
+
+
 class Memon_legacy(StrictSchema):
     metadata = fields.Nested(MemonMetadata_legacy, required=True)
     data = fields.Nested(MemonChart_legacy, required=True, many=True)
@@ -123,15 +134,39 @@ class Memon_0_2_0(StrictSchema):
     )
 
 
-def _load_raw_memon(file: Path) -> Dict[str, Any]:
-    with open(file) as f:
-        res = json.load(f, use_decimal=True)
-        if not isinstance(res, dict):
+class Memon_0_3_0(StrictSchema):
+    version = fields.String(required=True, validate=validate.OneOf(["0.3.0"]))
+    metadata = fields.Nested(MemonMetadata_0_3_0, required=True)
+    data = fields.Dict(
+        keys=fields.String(), values=fields.Nested(MemonChart_0_1_0), required=True
+    )
+
+
+def _load_raw_memon(path: Path) -> Any:
+    with path.open() as f:
+        return json.load(f, use_decimal=True)
+
+
+load_folder: FolderLoader[Any] = make_folder_loader("*.memon", _load_raw_memon)
+
+
+def make_folder_loader_with_optional_merge(
+    memon_loader: Callable[[Any], jbt.Song]
+) -> Loader:
+    def load(path: Path, merge: bool = False, **kwargs: Any) -> jbt.Song:
+        files = load_folder(path)
+        if not merge and len(files) > 1:
             raise ValueError(
-                "JSON file does not represent a valid memon file : "
-                "The top level of a memon file should be a JSON Object"
+                "Multiple .memon files were found in the given folder, "
+                "use the --merge option if you want to make a single memon file "
+                "out of several that each containt a different chart (or set of "
+                "charts) for the same song"
             )
-        return res
+
+        charts = [memon_loader(d) for d in files.values()]
+        return reduce(jbt.Song.merge, charts)
+
+    return load
 
 
 def _load_memon_note_v0(
@@ -149,8 +184,7 @@ def _load_memon_note_v0(
         return jbt.TapNote(time, position)
 
 
-def load_memon_legacy(path: Path, **kwargs: Any) -> jbt.Song:
-    raw_memon = _load_raw_memon(path)
+def _load_memon_legacy(raw_memon: Any) -> jbt.Song:
     schema = Memon_legacy()
     memon = schema.load(raw_memon)
     metadata = jbt.Metadata(
@@ -179,8 +213,10 @@ def load_memon_legacy(path: Path, **kwargs: Any) -> jbt.Song:
     return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
 
-def load_memon_0_1_0(path: Path, **kwargs: Any) -> jbt.Song:
-    raw_memon = _load_raw_memon(path)
+load_memon_legacy = make_folder_loader_with_optional_merge(_load_memon_legacy)
+
+
+def _load_memon_0_1_0(raw_memon: Any) -> jbt.Song:
     schema = Memon_0_1_0()
     memon = schema.load(raw_memon)
     metadata = jbt.Metadata(
@@ -209,8 +245,10 @@ def load_memon_0_1_0(path: Path, **kwargs: Any) -> jbt.Song:
     return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
 
-def load_memon_0_2_0(path: Path, **kwargs: Any) -> jbt.Song:
-    raw_memon = _load_raw_memon(path)
+load_memon_0_1_0 = make_folder_loader_with_optional_merge(_load_memon_0_1_0)
+
+
+def _load_memon_0_2_0(raw_memon: Any) -> jbt.Song:
     schema = Memon_0_2_0()
     memon = schema.load(raw_memon)
     preview = None
@@ -246,6 +284,49 @@ def load_memon_0_2_0(path: Path, **kwargs: Any) -> jbt.Song:
     return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
 
+load_memon_0_2_0 = make_folder_loader_with_optional_merge(_load_memon_0_2_0)
+
+
+def _load_memon_0_3_0(raw_memon: Any) -> jbt.Song:
+    schema = Memon_0_3_0()
+    memon = schema.load(raw_memon)
+    preview = None
+    if "preview" in memon["metadata"]:
+        start = memon["metadata"]["preview"]["position"]
+        length = memon["metadata"]["preview"]["length"]
+        preview = jbt.Preview(start, length)
+
+    metadata = jbt.Metadata(
+        title=memon["metadata"]["title"],
+        artist=memon["metadata"]["artist"],
+        audio=none_or(Path, memon["metadata"].get("audio")),
+        cover=none_or(Path, memon["metadata"].get("cover")),
+        preview=preview,
+        preview_file=none_or(Path, memon["metadata"].get("preview_path")),
+    )
+    common_timing = jbt.Timing(
+        events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=memon["metadata"]["BPM"])],
+        beat_zero_offset=jbt.SecondsTime(-memon["metadata"]["offset"]),
+    )
+    charts: MultiDict[jbt.Chart] = MultiDict()
+    for difficulty, memon_chart in memon["data"].items():
+        charts.add(
+            difficulty,
+            jbt.Chart(
+                level=memon_chart["level"],
+                notes=[
+                    _load_memon_note_v0(note, memon_chart["resolution"])
+                    for note in memon_chart["notes"]
+                ],
+            ),
+        )
+
+    return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
+
+
+load_memon_0_3_0 = make_folder_loader_with_optional_merge(_load_memon_0_3_0)
+
+
 def _long_note_tail_value_v0(note: jbt.LongNote) -> int:
     dx = note.tail_tip.x - note.position.x
     dy = note.tail_tip.y - note.position.y
@@ -267,7 +348,6 @@ def _get_timing(song: jbt.Song) -> jbt.Timing:
 
 
 def _raise_if_unfit_for_v0(song: jbt.Song, version: str) -> None:
-
     """Raises an exception if the Song object is ill-formed or contains information
     that cannot be represented in a memon v0.x.y file (includes legacy)"""
 
@@ -347,8 +427,7 @@ def _dump_memon_note_v0(
     return memon_note
 
 
-def dump_memon_legacy(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
-
+def _dump_memon_legacy(song: jbt.Song) -> SongFile:
     _raise_if_unfit_for_v0(song, "legacy")
     timing = _get_timing(song)
 
@@ -379,16 +458,23 @@ def dump_memon_legacy(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, 
             }
         )
 
-    if path.is_dir():
-        filepath = path / f"{song.metadata.title}.memon"
-    else:
-        filepath = path
-
-    return {filepath: _dump_to_json(memon)}
+    return SongFile(contents=_dump_to_json(memon), song=song)
 
 
-def dump_memon_0_1_0(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
+def make_memon_dumper(internal_dumper: Callable[[jbt.Song], SongFile]) -> Dumper:
+    def dump(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
+        name_format = FileNameFormat(Path("{title}.memon"), suggestion=path)
+        songfile = internal_dumper(song)
+        filepath = name_format.available_filename_for(songfile)
+        return {filepath: songfile.contents}
 
+    return dump
+
+
+dump_memon_legacy = make_memon_dumper(_dump_memon_legacy)
+
+
+def _dump_memon_0_1_0(song: jbt.Song) -> SongFile:
     _raise_if_unfit_for_v0(song, "v0.1.0")
     timing = _get_timing(song)
 
@@ -415,15 +501,13 @@ def dump_memon_0_1_0(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, b
             ],
         }
 
-    if path.is_dir():
-        filepath = path / f"{song.metadata.title}.memon"
-    else:
-        filepath = path
-
-    return {filepath: _dump_to_json(memon)}
+    return SongFile(contents=_dump_to_json(memon), song=song)
 
 
-def dump_memon_0_2_0(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, bytes]:
+dump_memon_0_1_0 = make_memon_dumper(_dump_memon_0_1_0)
+
+
+def _dump_memon_0_2_0(song: jbt.Song) -> SongFile:
 
     _raise_if_unfit_for_v0(song, "v0.2.0")
     timing = _get_timing(song)
@@ -458,9 +542,55 @@ def dump_memon_0_2_0(song: jbt.Song, path: Path, **kwargs: dict) -> Dict[Path, b
             ],
         }
 
-    if path.is_dir():
-        filepath = path / f"{song.metadata.title}.memon"
-    else:
-        filepath = path
+    return SongFile(contents=_dump_to_json(memon), song=song)
 
-    return {filepath: _dump_to_json(memon)}
+
+dump_memon_0_2_0 = make_memon_dumper(_dump_memon_0_2_0)
+
+
+def _dump_memon_0_3_0(song: jbt.Song) -> SongFile:
+
+    _raise_if_unfit_for_v0(song, "v0.3.0")
+    timing = _get_timing(song)
+
+    memon: Dict[str, Any] = {
+        "version": "0.3.0",
+        "metadata": {
+            "song title": song.metadata.title,
+            "artist": song.metadata.artist,
+            "BPM": timing.events[0].BPM,
+            "offset": -timing.beat_zero_offset,
+        },
+        "data": {},
+    }
+
+    if song.metadata.audio is not None:
+        memon["metadata"]["music path"] = str(song.metadata.audio)
+
+    if song.metadata.cover is not None:
+        memon["metadata"]["album cover path"] = str(song.metadata.cover)
+
+    if song.metadata.preview is not None:
+        memon["metadata"]["preview"] = {
+            "position": song.metadata.preview.start,
+            "length": song.metadata.preview.length,
+        }
+
+    if song.metadata.preview_file is not None:
+        memon["metadata"]["preview path"] = str(song.metadata.preview_file)
+
+    for difficulty, chart in song.charts.items():
+        resolution = _compute_resolution(chart.notes)
+        memon["data"][difficulty] = {
+            "level": chart.level,
+            "resolution": resolution,
+            "notes": [
+                _dump_memon_note_v0(note, resolution)
+                for note in sorted(set(chart.notes), key=lambda n: (n.time, n.position))
+            ],
+        }
+
+    return SongFile(contents=_dump_to_json(memon), song=song)
+
+
+dump_memon_0_3_0 = make_memon_dumper(_dump_memon_0_3_0)
