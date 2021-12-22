@@ -1,9 +1,10 @@
 import string
+from functools import singledispatch
 from itertools import count
 from pathlib import Path
-from typing import AbstractSet, Any, Dict, Iterator, TypedDict
+from typing import AbstractSet, Any, Dict, Iterator, Optional, TypedDict
 
-from jubeatools.formats.filetypes import ChartFile
+from jubeatools.formats.filetypes import ChartFile, JubeatFile, SongFile
 from jubeatools.formats.typing import ChartFileDumper, Dumper
 from jubeatools.song import Difficulty, Song
 from jubeatools.utils import none_or
@@ -31,44 +32,17 @@ def make_dumper_from_chart_file_dumper(
 
     def dumper(song: Song, path: Path, **kwargs: Any) -> Dict[Path, bytes]:
         res: Dict[Path, bytes] = {}
-        if path.is_dir():
-            file_path = file_name_template
-            parent = path
-        else:
-            file_path = path
-            parent = path.parent
-
-        name_format = f"{file_path.stem}{{dedup}}{file_path.suffix}"
+        name_format = FileNameFormat(file_name_template, suggestion=path)
         files = internal_dumper(song, **kwargs)
         for chartfile in files:
-            filepath = choose_file_path(chartfile, name_format, parent, res.keys())
+            filepath = name_format.available_filename_for(
+                chartfile, already_chosen=res.keys()
+            )
             res[filepath] = chartfile.contents
 
         return res
 
     return dumper
-
-
-def choose_file_path(
-    chart_file: ChartFile,
-    name_format: str,
-    parent: Path,
-    already_chosen: AbstractSet[Path],
-) -> Path:
-    all_paths = iter_possible_paths(chart_file, name_format, parent)
-    not_on_filesystem = filter(lambda p: not p.exists(), all_paths)
-    not_already_chosen = filter(lambda p: p not in already_chosen, not_on_filesystem)
-    return next(not_already_chosen)
-
-
-def iter_possible_paths(
-    chart_file: ChartFile, name_format: str, parent: Path
-) -> Iterator[Path]:
-    for dedup_index in count(start=0):
-        params = extract_format_params(chart_file, dedup_index)
-        formatter = BetterStringFormatter()
-        filename = formatter.format(name_format, **params).strip()
-        yield parent / filename
 
 
 class FormatParameters(TypedDict, total=False):
@@ -82,13 +56,64 @@ class FormatParameters(TypedDict, total=False):
     dedup: str
 
 
-def extract_format_params(chartfile: ChartFile, dedup_index: int) -> FormatParameters:
+class FileNameFormat:
+    def __init__(self, file_name_template: Path, suggestion: Path):
+        if suggestion.is_dir():
+            file_path = file_name_template
+            self.parent = suggestion
+        else:
+            file_path = suggestion
+            self.parent = suggestion.parent
+
+        self.name_format = f"{file_path.stem}{{dedup}}{file_path.suffix}"
+
+    def available_filename_for(
+        self, file: JubeatFile, already_chosen: Optional[AbstractSet[Path]] = None
+    ) -> Path:
+        fixed_params = extract_format_params(file)
+        return next(self.iter_possible_paths(fixed_params, already_chosen))
+
+    def iter_possible_paths(
+        self,
+        fixed_params: FormatParameters,
+        already_chosen: Optional[AbstractSet[Path]] = None,
+    ) -> Iterator[Path]:
+        all_paths = self.iter_deduped_paths(fixed_params)
+        not_on_filesystem = (p for p in all_paths if not p.exists())
+        if already_chosen is not None:
+            yield from (p for p in not_on_filesystem if p not in already_chosen)
+        else:
+            yield from not_on_filesystem
+
+    def iter_deduped_paths(self, params: FormatParameters) -> Iterator[Path]:
+        for dedup_index in count(start=0):
+            # TODO Remove the type ignore once this issue is fixed
+            # https://github.com/python/mypy/issues/6019
+            params.update(  # type: ignore[call-arg]
+                dedup="" if dedup_index == 0 else f"-{dedup_index}"
+            )
+            formatter = BetterStringFormatter()
+            filename = formatter.format(self.name_format, **params).strip()
+            yield self.parent / filename
+
+
+@singledispatch
+def extract_format_params(file: JubeatFile) -> FormatParameters:
+    ...
+
+
+@extract_format_params.register
+def extract_song_format_params(songfile: SongFile) -> FormatParameters:
+    return FormatParameters(title=none_or(slugify, songfile.song.metadata.title) or "")
+
+
+@extract_format_params.register
+def extract_chart_format_params(chartfile: ChartFile) -> FormatParameters:
     return FormatParameters(
         title=none_or(slugify, chartfile.song.metadata.title) or "",
         difficulty=slugify(chartfile.difficulty),
         difficulty_index=str(DIFFICULTY_INDEX.get(chartfile.difficulty, 2)),
         difficulty_number=str(DIFFICULTY_NUMBER.get(chartfile.difficulty, 3)),
-        dedup="" if dedup_index == 0 else f"-{dedup_index}",
     )
 
 

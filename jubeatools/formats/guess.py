@@ -53,6 +53,8 @@ def recognize_memon_version(obj: dict) -> Format:
         return Format.MEMON_0_1_0
     elif version == "0.2.0":
         return Format.MEMON_0_2_0
+    elif version == "0.3.0":
+        return Format.MEMON_0_3_0
     else:
         raise ValueError(f"Unsupported memon version : {version}")
 

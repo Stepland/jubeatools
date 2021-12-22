@@ -180,7 +180,7 @@ class Timing:
 
 @dataclass
 class Chart:
-    level: Decimal
+    level: Optional[Decimal]
     timing: Optional[Timing] = None
     notes: List[Union[TapNote, LongNote]] = field(default_factory=list)
 

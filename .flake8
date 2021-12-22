@@ -32,6 +32,6 @@ per-file-ignores =
     example*.py: F405, F403
     # Silence weird false positive on inline comments ...
     jubeatools/formats/jubeat_analyser/symbols.py: E262
-    # there's a field named "l" in a marshmallow schema
-    jubeatools/formats/memon/memon.py: E741
+    # there's a field named "l" in a marshmallow schema and I don't want te rename it
+    jubeatools/formats/memon/v0.py: E741
 max-line-length = 120

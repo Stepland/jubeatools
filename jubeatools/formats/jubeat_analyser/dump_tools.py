@@ -210,7 +210,8 @@ def create_sections_from_chart(
 
     header = sections[BeatsTime(0)].commands
     header["o"] = int(timing.beat_zero_offset * 1000)
-    header["lev"] = Decimal(chart.level)
+    if chart.level is not None:
+        header["lev"] = Decimal(chart.level)
     header["dif"] = DIFFICULTY_NUMBER.get(difficulty, 3)
     if metadata.audio is not None:
         header["m"] = metadata.audio

@@ -32,6 +32,7 @@ toml = "^0.10.2"
 flake8 = "^3.9.1"
 autoimport = "^0.7.0"
 types-simplejson = "^3.17.1"
+types-toml = "^0.10.1"
 
 [tool.poetry.scripts]
 jubeatools = 'jubeatools.cli.cli:convert'

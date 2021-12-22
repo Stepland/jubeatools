@@ -18,7 +18,8 @@ Sanity checks before anything serious happens, from the repo's root :
 Now that this is done you can move on to actually making a new version,
 while still being in the repo's root :
 1. Update `CHANGELOG.md`
-1. Commit everything you want in the new release, including the changelog
+1. Update `README.md` if you've just added support for a new format
+1. Commit everything you want in the new release
 1. Run the script <br> `$ poetry run python utils/bump_version.py {rule}`
    
    `{rule}` will usually be one of `patch`, `minor` or `major`. But it can be anything `poetry version` handles.

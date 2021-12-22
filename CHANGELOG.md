@@ -1,3 +1,7 @@
+# v1.3.0
+## Added
+- [memon] 🎉 v0.3.0 support
+
 # v1.2.3
 ## Fixed
 - Loaders and Dumpers would recieve options with unwanted default values when
