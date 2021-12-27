@@ -6,8 +6,7 @@ from typing import Callable, ContextManager, Iterator, Optional
 from hypothesis import note
 
 from jubeatools import song
-from jubeatools.formats import DUMPERS, LOADERS
-from jubeatools.formats.enum import Format
+from jubeatools.formats import DUMPERS, LOADERS, Format
 from jubeatools.formats.guess import guess_format
 
 

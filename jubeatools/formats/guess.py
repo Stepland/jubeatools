@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-from .enum import Format
+from .format_names import Format
 
 
 def guess_format(path: Path) -> Format:

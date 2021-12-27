@@ -223,14 +223,13 @@ class Metadata:
     preview_file: Optional[Path] = None
 
     @classmethod
-    def permissive_merge(cls, metadatas: Iterable["Metadata"]) -> "Metadata":
+    def permissive_merge(cls, *metadatas: "Metadata") -> "Metadata":
         """Make the "sum" of all the given metadata instances, if possible. If
         several instances have different defined values for the same field,
         merging will fail. Fields with Noneor empty values (empty string or
         empty path) are conscidered undefined and their values can be replaced
         by an actual value if supplied by at least one object from the given
         iterable."""
-        metadatas = list(metadatas)
         return cls(
             **{f.name: _get_common_value(f, metadatas) for f in fields(cls)},
         )
@@ -285,8 +284,8 @@ class Song:
     common_hakus: Optional[Set[BeatsTime]] = None
 
     @classmethod
-    def from_monochart_instances(cls, songs: Iterable["Song"]) -> "Song":
-        metadata = Metadata.permissive_merge(song.metadata for song in songs)
+    def from_monochart_instances(cls, *songs: "Song") -> "Song":
+        metadata = Metadata.permissive_merge(*(song.metadata for song in songs))
         charts: MultiDict[Chart] = MultiDict()
         for song in songs:
             song.remove_common_timing()

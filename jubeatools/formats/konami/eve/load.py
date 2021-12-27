@@ -11,7 +11,7 @@ from ..load_tools import make_chart_from_events
 def load_eve(path: Path, *, beat_snap: int = 240, **kwargs: Any) -> song.Song:
     files = load_folder(path)
     charts = [_load_eve(l, p, beat_snap=beat_snap) for p, l in files.items()]
-    return song.Song.from_monochart_instances(charts)
+    return song.Song.from_monochart_instances(*charts)
 
 
 def load_file(path: Path) -> List[str]:

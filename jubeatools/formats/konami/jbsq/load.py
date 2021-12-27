@@ -15,7 +15,7 @@ def load_jbsq(path: Path, *, beat_snap: int = 240, **kwargs: Any) -> song.Song:
         load_jbsq_file(bytes_, path, beat_snap=beat_snap)
         for path, bytes_ in files.items()
     ]
-    return song.Song.from_monochart_instances(charts)
+    return song.Song.from_monochart_instances(*charts)
 
 
 def load_file(path: Path) -> bytes:

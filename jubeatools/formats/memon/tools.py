@@ -31,7 +31,7 @@ def make_memon_folder_loader(memon_loader: Callable[[Any], jbt.Song]) -> Loader:
             )
 
         charts = [memon_loader(d) for d in files.values()]
-        return jbt.Song.from_monochart_instances(charts)
+        return jbt.Song.from_monochart_instances(*charts)
 
     return load
 

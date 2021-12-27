@@ -4,7 +4,7 @@ import hypothesis.strategies as st
 from hypothesis import given
 
 from jubeatools import song
-from jubeatools.formats.enum import Format
+from jubeatools.formats.format_names import Format
 from jubeatools.testutils import strategies as jbst
 from jubeatools.testutils.test_patterns import dump_and_load_then_compare
 

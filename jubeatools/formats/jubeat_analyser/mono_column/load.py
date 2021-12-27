@@ -246,7 +246,7 @@ class MonoColumnParser(JubeatAnalyserParser):
 def load_mono_column(path: Path, **kwargs: Any) -> Song:
     files = load_folder(path)
     charts = [_load_mono_column_file(lines) for _, lines in files.items()]
-    return Song.from_monochart_instances(charts)
+    return Song.from_monochart_instances(*charts)
 
 
 def _load_mono_column_file(lines: List[str]) -> Song:

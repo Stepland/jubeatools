@@ -340,4 +340,4 @@ def _load_memo1_file(lines: List[str]) -> Song:
 def load_memo1(path: Path, **kwargs: Any) -> Song:
     files = load_folder(path)
     charts = [_load_memo1_file(lines) for _, lines in files.items()]
-    return Song.from_monochart_instances(charts)
+    return Song.from_monochart_instances(*charts)
