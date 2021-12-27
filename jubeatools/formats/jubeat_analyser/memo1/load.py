@@ -1,7 +1,6 @@
 from copy import deepcopy
 from dataclasses import astuple, dataclass
 from decimal import Decimal
-from functools import reduce
 from itertools import product
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Mapping, Set, Tuple, Union
@@ -341,4 +340,4 @@ def _load_memo1_file(lines: List[str]) -> Song:
 def load_memo1(path: Path, **kwargs: Any) -> Song:
     files = load_folder(path)
     charts = [_load_memo1_file(lines) for _, lines in files.items()]
-    return reduce(Song.merge, charts)
+    return Song.from_monochart_instances(charts)

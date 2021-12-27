@@ -4,6 +4,7 @@ Hypothesis strategies to generate notes and charts
 
 from decimal import Decimal
 from enum import Flag, auto
+from functools import partial
 from itertools import product
 from pathlib import Path
 from typing import Dict, Iterable, Optional, Set, Union
@@ -210,19 +211,25 @@ def level(draw: st.DrawFn) -> Union[int, Decimal]:
     return d
 
 
+hakus = partial(st.sets, beat_time())
+
+
 @st.composite
 def chart(
     draw: st.DrawFn,
     timing_strat: st.SearchStrategy[Timing] = timing_info(),
+    hakus_strat: st.SearchStrategy[Optional[Set[BeatsTime]]] = st.none(),
     notes_strat: st.SearchStrategy[Iterable[Union[TapNote, LongNote]]] = notes(),
     level_strat: st.SearchStrategy[Union[int, Decimal]] = level(),
 ) -> Chart:
     level = Decimal(draw(level_strat))
     timing = draw(timing_strat)
+    hakus = draw(hakus_strat)
     notes = draw(notes_strat)
     return Chart(
         level=level,
         timing=timing,
+        hakus=hakus,
         notes=sorted(notes, key=lambda n: (n.time, n.position)),
     )
 
@@ -238,11 +245,19 @@ def preview(draw: st.DrawFn) -> Preview:
     return Preview(start, length)
 
 
+metadata_text_strat = partial(
+    st.text, alphabet=st.characters(blacklist_categories=("Cc", "Cs"))
+)
+metadata_path_strat = partial(
+    st.text, alphabet=st.characters(blacklist_categories=("Cc", "Cs"))
+)
+
+
 @st.composite
 def metadata(
     draw: st.DrawFn,
-    text_strat: st.SearchStrategy[str] = st.text(),
-    path_strat: st.SearchStrategy[str] = st.text(),
+    text_strat: st.SearchStrategy[str] = metadata_text_strat(),
+    path_strat: st.SearchStrategy[str] = metadata_path_strat(),
 ) -> Metadata:
     return Metadata(
         title=draw(text_strat),
@@ -267,6 +282,7 @@ def song(
         st.sampled_from(list(d.value for d in Difficulty)), min_size=1, max_size=3
     ),
     common_timing_strat: st.SearchStrategy[Optional[Timing]] = timing_info(),
+    common_hakus_strat: st.SearchStrategy[Optional[Set[BeatsTime]]] = st.none(),
     chart_strat: st.SearchStrategy[Chart] = chart(),
     metadata_strat: st.SearchStrategy[Metadata] = metadata(),
 ) -> Song:
@@ -279,4 +295,5 @@ def song(
         metadata=draw(metadata_strat),
         charts=charts,
         common_timing=draw(common_timing_strat),
+        common_hakus=draw(common_hakus_strat),
     )

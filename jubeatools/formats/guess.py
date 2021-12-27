@@ -35,7 +35,7 @@ def recognize_json_formats(path: Path) -> Format:
     if not isinstance(obj, dict):
         raise ValueError("Top level value is not an object")
 
-    if obj.keys() >= {"metadata", "data"}:
+    if obj.keys() & {"metadata", "data", "version"}:
         return recognize_memon_version(obj)
     elif obj.keys() >= {"meta", "time", "note"}:
         return Format.MALODY
@@ -55,6 +55,8 @@ def recognize_memon_version(obj: dict) -> Format:
         return Format.MEMON_0_2_0
     elif version == "0.3.0":
         return Format.MEMON_0_3_0
+    elif version == "1.0.0":
+        return Format.MEMON_1_0_0
     else:
         raise ValueError(f"Unsupported memon version : {version}")
 

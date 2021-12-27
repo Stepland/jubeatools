@@ -1,7 +1,7 @@
 import warnings
 from decimal import Decimal
 from fractions import Fraction
-from functools import reduce, singledispatch
+from functools import singledispatch
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
@@ -18,7 +18,7 @@ from . import schema as malody
 def load_malody(path: Path, **kwargs: Any) -> song.Song:
     files = load_folder(path)
     charts = [load_malody_file(d) for d in files.values()]
-    return reduce(song.Song.merge, charts)
+    return song.Song.from_monochart_instances(charts)
 
 
 def load_file(path: Path) -> Any:

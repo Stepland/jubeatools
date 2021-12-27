@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict, List, Protocol
 
-from jubeatools.formats.filetypes import ChartFile
+from jubeatools.formats.filetypes import ChartFile, SongFile
 from jubeatools.song import Song
 
 
@@ -21,6 +21,14 @@ class ChartFileDumper(Protocol):
     per chart"""
 
     def __call__(self, song: Song, **kwargs: Any) -> List[ChartFile]:
+        ...
+
+
+class SongFileDumper(Protocol):
+    """Generic signature of internal dumper for formats that use a single file
+    to hold all charts of a song"""
+
+    def __call__(self, song: Song, **kwargs: Any) -> SongFile:
         ...
 
 

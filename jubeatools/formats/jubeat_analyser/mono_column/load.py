@@ -1,7 +1,6 @@
 from copy import deepcopy
 from dataclasses import astuple, dataclass
 from decimal import Decimal
-from functools import reduce
 from itertools import product
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Set, Tuple, Union
@@ -247,7 +246,7 @@ class MonoColumnParser(JubeatAnalyserParser):
 def load_mono_column(path: Path, **kwargs: Any) -> Song:
     files = load_folder(path)
     charts = [_load_mono_column_file(lines) for _, lines in files.items()]
-    return reduce(Song.merge, charts)
+    return Song.from_monochart_instances(charts)
 
 
 def _load_mono_column_file(lines: List[str]) -> Song:

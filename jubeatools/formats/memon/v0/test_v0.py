@@ -32,11 +32,6 @@ def memon_legacy_compatible_song(draw: st.DrawFn) -> song.Song:
             diffs_strat=memon_diffs(),
             chart_strat=jbst.chart(timing_strat=st.none()),
             common_timing_strat=jbst.timing_info(with_bpm_changes=False),
-            metadata_strat=jbst.metadata(
-                text_strat=st.text(
-                    alphabet=st.characters(blacklist_categories=("Cc", "Cs")),
-                ),
-            ),
         )
     )
     random_song.metadata.preview = None
@@ -65,11 +60,6 @@ def memon_0_2_0_compatible_song(draw: st.DrawFn) -> song.Song:
             diffs_strat=memon_diffs(),
             chart_strat=jbst.chart(timing_strat=st.none()),
             common_timing_strat=jbst.timing_info(with_bpm_changes=False),
-            metadata_strat=jbst.metadata(
-                text_strat=st.text(
-                    alphabet=st.characters(blacklist_categories=("Cc", "Cs")),
-                ),
-            ),
         )
     )
     random_song.metadata.preview_file = None
@@ -88,11 +78,6 @@ def memon_0_3_0_compatible_song(draw: st.DrawFn) -> song.Song:
             diffs_strat=memon_diffs(),
             chart_strat=jbst.chart(timing_strat=st.none()),
             common_timing_strat=jbst.timing_info(with_bpm_changes=False),
-            metadata_strat=jbst.metadata(
-                text_strat=st.text(
-                    alphabet=st.characters(blacklist_categories=("Cc", "Cs")),
-                ),
-            ),
         )
     )
 

@@ -29,6 +29,8 @@ def dump_and_load_then_compare(
     dump_options = dump_options or {}
     loader = LOADERS[format_]
     dumper = DUMPERS[format_]
+    song.minimize_timings()
+    song.minimize_hakus()
     with temp_path() as folder_path:
         files = dumper(song, folder_path, **dump_options)
         for file_path, bytes_ in files.items():
@@ -36,4 +38,6 @@ def dump_and_load_then_compare(
             note(f"Wrote to {file_path} :\n{bytes_decoder(bytes_)}")
             assert guess_format(file_path) == format_
         recovered_song = loader(folder_path, **load_options)
+        recovered_song.minimize_timings()
+        recovered_song.minimize_hakus()
         assert recovered_song == song

@@ -17,4 +17,6 @@ def test_that_ommiting_beat_snap_works() -> None:
         result = runner.invoke(
             convert, [str(p.resolve(strict=True)), "out.txt", "-f", "memo2"]
         )
+        if result.exception:
+            raise result.exception
         assert result.exit_code == 0

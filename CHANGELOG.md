@@ -1,3 +1,11 @@
+# v1.4.0
+## Added
+- Jubeatools can now handle HAKUs, in the following formats :
+  - [memon:v1.0.0]
+- [memon] 🎉 inital support for v1.0.0 !
+## Changed
+- Improved the merging procedure for song objects
+
 # v1.3.0
 ## Added
 - [memon] 🎉 v0.3.0 support
