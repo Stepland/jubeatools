@@ -15,7 +15,7 @@ from . import construct
 
 def _dump_jbsq(song: song.Song, **kwargs: dict) -> List[ChartFile]:
     res = []
-    for dif, chart, timing in song.iter_charts_with_timing():
+    for dif, chart, timing in song.iter_charts_with_applicable_timing():
         events = make_events_from_chart(chart.notes, timing)
         jbsq_chart = make_jbsq_chart(events, chart.notes)
         chart_bytes = construct.jbsq.build(jbsq_chart)

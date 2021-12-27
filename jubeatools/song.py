@@ -7,15 +7,30 @@ number of seconds is used"""
 
 from __future__ import annotations
 
-from dataclasses import astuple, dataclass, field
+from collections import Counter
+from dataclasses import Field, astuple, dataclass, field, fields
 from decimal import Decimal
 from enum import Enum, auto
 from fractions import Fraction
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Iterator, List, Mapping, Optional, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 from multidict import MultiDict
+
+from jubeatools.utils import none_or
 
 BeatsTime = Fraction
 SecondsTime = Decimal
@@ -174,19 +189,26 @@ class BPMEvent:
 
 @dataclass(unsafe_hash=True)
 class Timing:
-    events: List[BPMEvent]
+    events: Sequence[BPMEvent]
     beat_zero_offset: SecondsTime
+
+    def __post_init__(self) -> None:
+        self.events = tuple(self.events)
 
 
 @dataclass
 class Chart:
     level: Optional[Decimal]
     timing: Optional[Timing] = None
+    hakus: Optional[Set[BeatsTime]] = None
     notes: List[Union[TapNote, LongNote]] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Preview:
+    """Frozen so it can be hashed to be deduped using a set when merging
+    Metadata instances"""
+
     start: SecondsTime
     length: SecondsTime
 
@@ -200,6 +222,51 @@ class Metadata:
     preview: Optional[Preview] = None
     preview_file: Optional[Path] = None
 
+    @classmethod
+    def permissive_merge(cls, metadatas: Iterable["Metadata"]) -> "Metadata":
+        """Make the "sum" of all the given metadata instances, if possible. If
+        several instances have different defined values for the same field,
+        merging will fail. Fields with Noneor empty values (empty string or
+        empty path) are conscidered undefined and their values can be replaced
+        by an actual value if supplied by at least one object from the given
+        iterable."""
+        metadatas = list(metadatas)
+        return cls(
+            **{f.name: _get_common_value(f, metadatas) for f in fields(cls)},
+        )
+
+
+def _get_common_value(field_: Field, metadatas: Iterable[Metadata]) -> Any:
+    raw_values = []
+    empty_values = []
+    for m in metadatas:
+        value = getattr(m, field_.name)
+        if value is None:
+            continue
+        elif not value:
+            empty_values.append(value)
+        else:
+            raw_values.append(value)
+
+    real_values = set(raw_values)
+    if len(real_values) > 1:
+        raise ValueError(
+            f"Can't merge metadata, the {field_.name} field has "
+            f"conflicting possible values : {real_values}"
+        )
+
+    try:
+        return real_values.pop()
+    except KeyError:
+        pass
+
+    try:
+        return empty_values.pop()
+    except IndexError:
+        pass
+
+    return None
+
 
 class Difficulty(str, Enum):
     BASIC = "BSC"
@@ -209,34 +276,74 @@ class Difficulty(str, Enum):
 
 @dataclass
 class Song:
-
     """The abstract representation format for all jubeat chart sets.
     A Song is a set of charts with associated metadata"""
 
     metadata: Metadata
     charts: Mapping[str, Chart] = field(default_factory=MultiDict)
     common_timing: Optional[Timing] = None
+    common_hakus: Optional[Set[BeatsTime]] = None
 
-    def merge(self, other: "Song") -> "Song":
-        if self.metadata != other.metadata:
-            raise ValueError(
-                "Merge conflit in song metadata :\n"
-                f"{self.metadata}\n"
-                f"{other.metadata}"
-            )
+    @classmethod
+    def from_monochart_instances(cls, songs: Iterable["Song"]) -> "Song":
+        metadata = Metadata.permissive_merge(song.metadata for song in songs)
         charts: MultiDict[Chart] = MultiDict()
-        charts.extend(self.charts)
-        charts.extend(other.charts)
-        if (
-            self.common_timing is not None
-            and other.common_timing is not None
-            and self.common_timing != other.common_timing
-        ):
-            raise ValueError("Can't merge songs with differing global timings")
-        common_timing = self.common_timing or other.common_timing
-        return Song(self.metadata, charts, common_timing)
+        for song in songs:
+            song.remove_common_timing()
+            song.remove_common_hakus()
+            charts.extend(song.charts)
 
-    def iter_charts_with_timing(self) -> Iterator[Tuple[str, Chart, Timing]]:
+        merged = cls(
+            metadata=metadata,
+            charts=charts,
+        )
+        merged.minimize_timings()
+        merged.minimize_hakus()
+        return merged
+
+    def minimize_timings(self) -> None:
+        """Turn timings into minimal form : Use the most common timing object
+        as the common timing, if it is used by more than two charts, otherwise
+        each chart gets its own timing object and no common timing is defined"""
+        self.remove_common_timing()
+        counts = Counter(c.timing for c in self.charts.values())
+        ((most_used, count),) = counts.most_common(1)
+        if count >= 2:
+            self.common_timing = most_used
+            for chart in self.charts.values():
+                if chart.timing == most_used:
+                    chart.timing = None
+
+    def remove_common_timing(self) -> None:
+        """Modify the song object so that no chart relies on the common timing
+        object, charts that previously did rely on it now have a chart-specific
+        timing object equal to the old common timing"""
+        for _, chart, applicable_timing in self.iter_charts_with_applicable_timing():
+            chart.timing = applicable_timing
+
+        self.common_timing = None
+
+    def minimize_hakus(self) -> None:
+        """Same deal as "minimize_timings" but with hakus"""
+        self.remove_common_hakus()
+        counts = Counter(
+            none_or(frozenset.__call__, c.hakus) for c in self.charts.values()
+        )
+        most_used, count = counts.most_common(1).pop()
+        if count >= 2:
+            self.common_hakus = most_used
+            for chart in self.charts.values():
+                if chart.hakus == most_used:
+                    chart.hakus = None
+
+    def remove_common_hakus(self) -> None:
+        for chart in self.charts.values():
+            if chart.hakus is None:
+                chart.hakus = self.common_hakus
+
+        self.common_hakus = None
+
+    def iter_charts_with_applicable_timing(self) -> Iterator[Tuple[str, Chart, Timing]]:
         for dif, chart in self.charts.items():
             timing = chart.timing or self.common_timing
             if timing is None:

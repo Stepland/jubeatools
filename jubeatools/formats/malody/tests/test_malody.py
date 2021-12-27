@@ -65,7 +65,7 @@ def test_that_none_values_in_metadata_dont_appear_in_dumped_json(
 
 
 @given(malody_song())
-def test_that_field_are_ordered(s: song.Song) -> None:
+def test_that_fields_are_ordered(s: song.Song) -> None:
     dif, chart = next(iter(s.charts.items()))
     assert chart.timing is not None
     malody_chart = dump_malody_chart(s.metadata, dif, chart, chart.timing)

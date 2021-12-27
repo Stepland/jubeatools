@@ -15,7 +15,7 @@ from . import schema as malody
 
 def dump_malody_song(song: song.Song, **kwargs: dict) -> List[ChartFile]:
     res = []
-    for dif, chart, timing in song.iter_charts_with_timing():
+    for dif, chart, timing in song.iter_charts_with_applicable_timing():
         malody_chart = dump_malody_chart(song.metadata, dif, chart, timing)
         json_chart = malody.CHART_SCHEMA.dump(malody_chart)
         chart_bytes = json.dumps(json_chart, indent=4, use_decimal=True).encode("utf-8")
@@ -64,7 +64,7 @@ def dump_timing(timing: song.Timing) -> List[malody.BPMEvent]:
 
 def dump_bpm_change(b: song.BPMEvent) -> malody.BPMEvent:
     return malody.BPMEvent(
-        beat=beats_to_tuple(b.time),
+        beat=beats_to_fraction_tuple(b.time),
         bpm=b.BPM,
     )
 
@@ -83,7 +83,7 @@ def dump_note(
 @dump_note.register
 def dump_tap_note(n: song.TapNote) -> malody.TapNote:
     return malody.TapNote(
-        beat=beats_to_tuple(n.time),
+        beat=beats_to_fraction_tuple(n.time),
         index=n.position.index,
     )
 
@@ -91,16 +91,16 @@ def dump_tap_note(n: song.TapNote) -> malody.TapNote:
 @dump_note.register
 def dump_long_note(n: song.LongNote) -> malody.LongNote:
     return malody.LongNote(
-        beat=beats_to_tuple(n.time),
+        beat=beats_to_fraction_tuple(n.time),
         index=n.position.index,
-        endbeat=beats_to_tuple(n.time + n.duration),
+        endbeat=beats_to_fraction_tuple(n.time + n.duration),
         endindex=n.tail_tip.index,
     )
 
 
 def dump_bgm(audio: Path, timing: song.Timing) -> malody.Sound:
     return malody.Sound(
-        beat=beats_to_tuple(song.BeatsTime(0)),
+        beat=beats_to_fraction_tuple(song.BeatsTime(0)),
         sound=str(audio),
         vol=100,
         offset=-int(timing.beat_zero_offset * 1000),
@@ -110,7 +110,7 @@ def dump_bgm(audio: Path, timing: song.Timing) -> malody.Sound:
     )
 
 
-def beats_to_tuple(b: song.BeatsTime) -> Tuple[int, int, int]:
+def beats_to_fraction_tuple(b: song.BeatsTime) -> Tuple[int, int, int]:
     integer_part = int(b)
     remainder = b % 1
     return (

@@ -275,7 +275,7 @@ def make_full_dumper_from_jubeat_analyser_chart_dumper(
         song: Song, *, circle_free: bool = False, **kwargs: Any
     ) -> List[ChartFile]:
         files: List[ChartFile] = []
-        for difficulty, chart, timing in song.iter_charts_with_timing():
+        for difficulty, chart, timing in song.iter_charts_with_applicable_timing():
             chart_file = chart_dumper(
                 difficulty,
                 chart,
