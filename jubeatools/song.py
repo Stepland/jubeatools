@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    Dict,
     Iterable,
     Iterator,
     List,
@@ -27,8 +28,6 @@ from typing import (
     Tuple,
     Union,
 )
-
-from multidict import MultiDict
 
 from jubeatools.utils import none_or
 
@@ -279,18 +278,18 @@ class Song:
     A Song is a set of charts with associated metadata"""
 
     metadata: Metadata
-    charts: Mapping[str, Chart] = field(default_factory=MultiDict)
+    charts: Mapping[str, Chart] = field(default_factory=dict)
     common_timing: Optional[Timing] = None
     common_hakus: Optional[Set[BeatsTime]] = None
 
     @classmethod
     def from_monochart_instances(cls, *songs: "Song") -> "Song":
         metadata = Metadata.permissive_merge(*(song.metadata for song in songs))
-        charts: MultiDict[Chart] = MultiDict()
+        charts: Dict[str, Chart] = {}
         for song in songs:
             song.remove_common_timing()
             song.remove_common_hakus()
-            charts.extend(song.charts)
+            charts.update(song.charts)
 
         merged = cls(
             metadata=metadata,

@@ -1,7 +1,5 @@
 from pathlib import Path
-from typing import Any, Union
-
-from multidict import MultiDict
+from typing import Any, Dict, Union
 
 from jubeatools import song as jbt
 from jubeatools.utils import none_or
@@ -38,18 +36,17 @@ def _load_memon_legacy(raw_memon: Any) -> jbt.Song:
         events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=file["metadata"]["BPM"])],
         beat_zero_offset=jbt.SecondsTime(-file["metadata"]["offset"]),
     )
-    charts: MultiDict[jbt.Chart] = MultiDict()
+    charts: Dict[str, jbt.Chart] = {}
     for memon_chart in file["data"]:
-        charts.add(
-            memon_chart["dif_name"],
-            jbt.Chart(
-                level=memon_chart["level"],
-                notes=[
-                    _load_memon_note_v0(note, memon_chart["resolution"])
-                    for note in memon_chart["notes"]
-                ],
-            ),
+        difficulty = memon_chart["dif_name"]
+        chart = jbt.Chart(
+            level=memon_chart["level"],
+            notes=[
+                _load_memon_note_v0(note, memon_chart["resolution"])
+                for note in memon_chart["notes"]
+            ],
         )
+        charts[difficulty] = chart
 
     return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
@@ -70,18 +67,16 @@ def _load_memon_0_1_0(raw_memon: Any) -> jbt.Song:
         events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=file["metadata"]["BPM"])],
         beat_zero_offset=jbt.SecondsTime(-file["metadata"]["offset"]),
     )
-    charts: MultiDict[jbt.Chart] = MultiDict()
+    charts: Dict[str, jbt.Chart] = {}
     for difficulty, memon_chart in file["data"].items():
-        charts.add(
-            difficulty,
-            jbt.Chart(
-                level=memon_chart["level"],
-                notes=[
-                    _load_memon_note_v0(note, memon_chart["resolution"])
-                    for note in memon_chart["notes"]
-                ],
-            ),
+        chart = jbt.Chart(
+            level=memon_chart["level"],
+            notes=[
+                _load_memon_note_v0(note, memon_chart["resolution"])
+                for note in memon_chart["notes"]
+            ],
         )
+        charts[difficulty] = chart
 
     return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
@@ -109,18 +104,16 @@ def _load_memon_0_2_0(raw_memon: Any) -> jbt.Song:
         events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=file["metadata"]["BPM"])],
         beat_zero_offset=jbt.SecondsTime(-file["metadata"]["offset"]),
     )
-    charts: MultiDict[jbt.Chart] = MultiDict()
+    charts: Dict[str, jbt.Chart] = {}
     for difficulty, memon_chart in file["data"].items():
-        charts.add(
-            difficulty,
-            jbt.Chart(
-                level=memon_chart["level"],
-                notes=[
-                    _load_memon_note_v0(note, memon_chart["resolution"])
-                    for note in memon_chart["notes"]
-                ],
-            ),
+        chart = jbt.Chart(
+            level=memon_chart["level"],
+            notes=[
+                _load_memon_note_v0(note, memon_chart["resolution"])
+                for note in memon_chart["notes"]
+            ],
         )
+        charts[difficulty] = chart
 
     return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 
@@ -149,18 +142,16 @@ def _load_memon_0_3_0(raw_memon: Any) -> jbt.Song:
         events=[jbt.BPMEvent(time=jbt.BeatsTime(0), BPM=file["metadata"]["BPM"])],
         beat_zero_offset=jbt.SecondsTime(-file["metadata"]["offset"]),
     )
-    charts: MultiDict[jbt.Chart] = MultiDict()
+    charts: Dict[str, jbt.Chart] = {}
     for difficulty, memon_chart in file["data"].items():
-        charts.add(
-            difficulty,
-            jbt.Chart(
-                level=memon_chart["level"],
-                notes=[
-                    _load_memon_note_v0(note, memon_chart["resolution"])
-                    for note in memon_chart["notes"]
-                ],
-            ),
+        chart = jbt.Chart(
+            level=memon_chart["level"],
+            notes=[
+                _load_memon_note_v0(note, memon_chart["resolution"])
+                for note in memon_chart["notes"]
+            ],
         )
+        charts[difficulty] = chart
 
     return jbt.Song(metadata=metadata, charts=charts, common_timing=common_timing)
 

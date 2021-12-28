@@ -8,7 +8,6 @@ repository = "https://github.com/Stepland/jubeatools"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-multidict = "^5.1.0"
 click = "^8.0.3"
 path = "^15.1.2"
 simplejson = "^3.17.0"
