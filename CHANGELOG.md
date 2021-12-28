@@ -1,7 +1,9 @@
 # v1.4.0
 ## Added
-- Jubeatools can now handle HAKUs, in the following formats :
+- Jubeatools can now handle HAKUs in the following formats :
   - [memon:v1.0.0]
+  - [eve]
+  - [jbsq]
 - [memon]
   - 🎉 inital support for v1.0.0 !
   - `--merge` option allows for several memon files to be merged when

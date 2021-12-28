@@ -349,3 +349,15 @@ class Song:
                     f"Neither song nor {dif} chart have any timing information"
                 )
             yield dif, chart, timing
+
+    def iter_charts(
+        self,
+    ) -> Iterator[Tuple[str, Chart, Timing, Optional[Set[BeatsTime]]]]:
+        for dif, chart in self.charts.items():
+            timing = chart.timing or self.common_timing
+            if timing is None:
+                raise ValueError(
+                    f"Neither song nor {dif} chart have any timing information"
+                )
+            hakus = chart.hakus if chart.hakus is not None else self.common_hakus
+            yield dif, chart, timing, hakus

@@ -12,9 +12,7 @@ from ..tools import make_memon_dumper
 from . import schema as memon
 
 
-def _dump_memon_1_0_0(
-    song: jbt.Song, use_fractions: bool = False, **kwargs: Any
-) -> SongFile:
+def _dump_memon_1_0_0(song: jbt.Song, **kwargs: Any) -> SongFile:
     metadata = dump_metadata(song.metadata)
     common_timing = dump_file_timing(song)
     charts = {

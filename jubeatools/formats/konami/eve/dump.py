@@ -10,8 +10,8 @@ from ..dump_tools import make_events_from_chart
 
 def _dump_eve(song: song.Song, **kwargs: dict) -> List[ChartFile]:
     res = []
-    for dif, chart, timing in song.iter_charts_with_applicable_timing():
-        events = make_events_from_chart(chart.notes, timing)
+    for dif, chart, timing, hakus in song.iter_charts():
+        events = make_events_from_chart(chart.notes, timing, hakus)
         chart_text = "\n".join(e.dump() for e in events)
         chart_bytes = chart_text.encode("ascii")
         res.append(ChartFile(chart_bytes, song, dif, chart))

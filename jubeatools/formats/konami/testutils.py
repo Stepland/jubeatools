@@ -12,7 +12,7 @@ simple_beat_strat = jbst.beat_time(
 
 @st.composite
 def eve_compatible_song(draw: st.DrawFn) -> song.Song:
-    """eve only keeps notes, timing info and difficulty,
+    """eve only keeps notes, hakus, timing info and difficulty,
     the precision you can get out of it is also severly limited"""
     diff = draw(st.sampled_from(list(song.Difficulty)))
     chart = draw(
@@ -42,6 +42,7 @@ def eve_compatible_song(draw: st.DrawFn) -> song.Song:
                 beat_time_strat=simple_beat_strat,
             ),
             level_strat=st.just(Decimal(0)),
+            hakus_strat=st.one_of(st.none(), st.sets(simple_beat_strat)),
         )
     )
     return song.Song(
