@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    Dict,
     Iterable,
     Iterator,
     List,
@@ -27,8 +28,6 @@ from typing import (
     Tuple,
     Union,
 )
-
-from multidict import MultiDict
 
 from jubeatools.utils import none_or
 
@@ -223,14 +222,13 @@ class Metadata:
     preview_file: Optional[Path] = None
 
     @classmethod
-    def permissive_merge(cls, metadatas: Iterable["Metadata"]) -> "Metadata":
+    def permissive_merge(cls, *metadatas: "Metadata") -> "Metadata":
         """Make the "sum" of all the given metadata instances, if possible. If
         several instances have different defined values for the same field,
         merging will fail. Fields with Noneor empty values (empty string or
         empty path) are conscidered undefined and their values can be replaced
         by an actual value if supplied by at least one object from the given
         iterable."""
-        metadatas = list(metadatas)
         return cls(
             **{f.name: _get_common_value(f, metadatas) for f in fields(cls)},
         )
@@ -280,18 +278,18 @@ class Song:
     A Song is a set of charts with associated metadata"""
 
     metadata: Metadata
-    charts: Mapping[str, Chart] = field(default_factory=MultiDict)
+    charts: Mapping[str, Chart] = field(default_factory=dict)
     common_timing: Optional[Timing] = None
     common_hakus: Optional[Set[BeatsTime]] = None
 
     @classmethod
-    def from_monochart_instances(cls, songs: Iterable["Song"]) -> "Song":
-        metadata = Metadata.permissive_merge(song.metadata for song in songs)
-        charts: MultiDict[Chart] = MultiDict()
+    def from_monochart_instances(cls, *songs: "Song") -> "Song":
+        metadata = Metadata.permissive_merge(*(song.metadata for song in songs))
+        charts: Dict[str, Chart] = {}
         for song in songs:
             song.remove_common_timing()
             song.remove_common_hakus()
-            charts.extend(song.charts)
+            charts.update(song.charts)
 
         merged = cls(
             metadata=metadata,
@@ -351,3 +349,15 @@ class Song:
                     f"Neither song nor {dif} chart have any timing information"
                 )
             yield dif, chart, timing
+
+    def iter_charts(
+        self,
+    ) -> Iterator[Tuple[str, Chart, Timing, Optional[Set[BeatsTime]]]]:
+        for dif, chart in self.charts.items():
+            timing = chart.timing or self.common_timing
+            if timing is None:
+                raise ValueError(
+                    f"Neither song nor {dif} chart have any timing information"
+                )
+            hakus = chart.hakus if chart.hakus is not None else self.common_hakus
+            yield dif, chart, timing, hakus

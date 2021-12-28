@@ -7,7 +7,7 @@ from hypothesis import note as hypothesis_note
 from hypothesis import strategies as st
 
 from jubeatools import song
-from jubeatools.formats.enum import Format
+from jubeatools.formats.format_names import Format
 from jubeatools.formats.jubeat_analyser.memo.dump import _dump_memo_chart
 from jubeatools.formats.jubeat_analyser.memo.load import MemoParser
 from jubeatools.testutils import strategies as jbst

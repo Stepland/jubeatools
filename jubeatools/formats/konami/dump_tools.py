@@ -1,7 +1,7 @@
 import math
 from fractions import Fraction
 from functools import singledispatch
-from typing import List
+from typing import List, Optional, Set
 
 from more_itertools import numeric_range
 
@@ -11,10 +11,12 @@ from jubeatools.formats.timemap import TimeMap
 from .commons import AnyNote, Command, Event, bpm_to_value, ticks_at_beat
 
 
-def make_events_from_chart(notes: List[AnyNote], timing: song.Timing) -> List[Event]:
+def make_events_from_chart(
+    notes: List[AnyNote], timing: song.Timing, hakus: Optional[Set[song.BeatsTime]]
+) -> List[Event]:
     time_map = TimeMap.from_timing(timing)
     note_events = make_note_events(notes, time_map)
-    timing_events = make_timing_events(notes, timing, time_map)
+    timing_events = make_timing_events(notes, timing, hakus, time_map)
     return sorted(note_events + timing_events)
 
 
@@ -38,14 +40,21 @@ def make_long_note_event(note: song.LongNote, time_map: TimeMap) -> Event:
 
 
 def make_timing_events(
-    notes: List[AnyNote], timing: song.Timing, time_map: TimeMap
+    notes: List[AnyNote],
+    timing: song.Timing,
+    hakus: Optional[Set[song.BeatsTime]],
+    time_map: TimeMap,
 ) -> List[Event]:
     bpm_events = [make_bpm_event(e, time_map) for e in timing.events]
     end_beat = choose_end_beat(notes)
     end_event = make_end_event(end_beat, time_map)
     measure_events = make_measure_events(end_beat, time_map)
-    beat_events = make_beat_events(end_beat, time_map)
-    return bpm_events + measure_events + beat_events + [end_event]
+    if hakus is not None:
+        haku_events = dump_hakus(hakus, time_map)
+    else:
+        haku_events = make_regular_hakus(end_beat, time_map)
+
+    return bpm_events + measure_events + haku_events + [end_event]
 
 
 def make_bpm_event(bpm_change: song.BPMEvent, time_map: TimeMap) -> Event:
@@ -94,14 +103,18 @@ def make_measure_event(beat: song.BeatsTime, time_map: TimeMap) -> Event:
     return Event(time=ticks, command=Command.MEASURE, value=0)
 
 
-def make_beat_events(end_beat: song.BeatsTime, time_map: TimeMap) -> List[Event]:
+def dump_hakus(hakus: Set[song.BeatsTime], time_map: TimeMap) -> List[Event]:
+    return [make_haku_event(beat, time_map) for beat in sorted(hakus)]
+
+
+def make_regular_hakus(end_beat: song.BeatsTime, time_map: TimeMap) -> List[Event]:
     start = song.BeatsTime(0)
     stop = end_beat + song.BeatsTime(1, 2)
     step = song.BeatsTime(1)
     beats = numeric_range(start, stop, step)
-    return [make_beat_event(beat, time_map) for beat in beats]
+    return [make_haku_event(beat, time_map) for beat in beats]
 
 
-def make_beat_event(beat: song.BeatsTime, time_map: TimeMap) -> Event:
+def make_haku_event(beat: song.BeatsTime, time_map: TimeMap) -> Event:
     ticks = ticks_at_beat(beat, time_map)
     return Event(time=ticks, command=Command.HAKU, value=0)

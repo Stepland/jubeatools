@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Dict, Iterable, Optional, Set, Union
 
 import hypothesis.strategies as st
-from multidict import MultiDict
 
 from jubeatools.song import (
     BeatsTime,
@@ -286,14 +285,9 @@ def song(
     chart_strat: st.SearchStrategy[Chart] = chart(),
     metadata_strat: st.SearchStrategy[Metadata] = metadata(),
 ) -> Song:
-    diffs = draw(diffs_strat)
-    charts: MultiDict[Chart] = MultiDict()
-    for diff_name in diffs:
-        charts.add(diff_name, draw(chart_strat))
-
     return Song(
         metadata=draw(metadata_strat),
-        charts=charts,
+        charts={difficulty: draw(chart_strat) for difficulty in draw(diffs_strat)},
         common_timing=draw(common_timing_strat),
         common_hakus=draw(common_hakus_strat),
     )

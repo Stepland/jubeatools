@@ -1,7 +1,7 @@
 from typing import Dict
 
 from . import jubeat_analyser, konami, malody, memon
-from .enum import Format
+from .format_names import Format
 from .typing import Dumper, Loader
 
 LOADERS: Dict[Format, Loader] = {

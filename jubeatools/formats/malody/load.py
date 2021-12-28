@@ -18,7 +18,7 @@ from . import schema as malody
 def load_malody(path: Path, **kwargs: Any) -> song.Song:
     files = load_folder(path)
     charts = [load_malody_file(d) for d in files.values()]
-    return song.Song.from_monochart_instances(charts)
+    return song.Song.from_monochart_instances(*charts)
 
 
 def load_file(path: Path) -> Any:

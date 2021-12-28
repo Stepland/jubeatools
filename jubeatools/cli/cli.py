@@ -5,21 +5,23 @@ from typing import Any, Dict, Optional
 
 import click
 
-from jubeatools.formats import DUMPERS, LOADERS
-from jubeatools.formats.enum import Format
+from jubeatools.formats import DUMPERS, LOADERS, Format
 from jubeatools.formats.guess import guess_format
 
 from .helpers import dumper_option, loader_option
 
 
 @click.command()
-@click.argument("src", type=click.Path(exists=True, dir_okay=False))
+@click.argument("src", type=click.Path(exists=True, dir_okay=True))
 @click.argument("dst", type=click.Path())
 @click.option(
     "--input-format",
     "input_format",
     type=click.Choice(list(f._value_ for f in LOADERS.keys())),
-    help="Input file format",
+    help=(
+        "Force jubeatools to read the input file/folder as the given format."
+        "If this option is not used jubeatools will try to guess the format"
+    ),
 )
 @click.option(
     "-f",
@@ -44,6 +46,11 @@ from .helpers import dumper_option, loader_option
         "For compatible input formats, snap all notes and bpm changes to "
         "the nearest 1/beat_snap beat"
     ),
+)
+@loader_option(
+    "--merge",
+    is_flag=True,
+    help="For memon, if called on a folder, merge all the .memon files found",
 )
 def convert(
     src: str,

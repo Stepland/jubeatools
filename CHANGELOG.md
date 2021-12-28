@@ -1,10 +1,20 @@
 # v1.4.0
 ## Added
-- Jubeatools can now handle HAKUs, in the following formats :
+- Jubeatools can now handle HAKUs in the following formats :
   - [memon:v1.0.0]
-- [memon] 🎉 inital support for v1.0.0 !
+  - [eve]
+  - [jbsq]
+- [memon]
+  - 🎉 inital support for v1.0.0 !
+  - `--merge` option allows for several memon files to be merged when
+    jubeatools is called on a folder
 ## Changed
 - Improved the merging procedure for song objects
+- Re-enable calling the CLI on a folder, this was disabled for some reason ?
+- The song class now uses a regular dict to map difficuty names to chart
+  objects, dissalowing files with duplicate difficulties (`memon:legacy` was the
+  only format that *technically* supported this anyway, I conscider it an edge
+  case not really worth handling)
 
 # v1.3.0
 ## Added

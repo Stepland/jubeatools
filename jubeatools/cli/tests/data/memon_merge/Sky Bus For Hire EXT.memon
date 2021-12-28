@@ -1,0 +1,25 @@
+{
+    "data": {
+        "EXT": {
+            "level": 10,
+            "notes": [
+                {
+                    "l": 0,
+                    "n": 15,
+                    "p": 0,
+                    "t": 1680
+                }
+            ],
+            "resolution": 240
+        }
+    },
+    "metadata": {
+        "BPM": 180.28199768066406,
+        "album cover path": "2a03puritans.png",
+        "artist": "commandycan",
+        "music path": "Sky Bus For Hire.ogg",
+        "offset": -0.028,
+        "song title": "Sky Bus For Hire"
+    },
+    "version": "0.1.0"
+}
